@@ -1,0 +1,246 @@
+/* ==========================================
+   1. 부드러운 화면 전환 애니메이션 (Fade-in)
+   ========================================== */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+body {
+    font-family: 'Gowun Dodum', 'Malgun Gothic', sans-serif;
+    background: linear-gradient(135deg, #FFAAA5 0%, #FFD3B6 50%, #FF8B94 100%);
+    background-size: 200% 200%;
+    animation: warmAurora 14s ease infinite;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+    color: #333333;
+}
+
+@keyframes warmAurora {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.container {
+    width: 100%;
+    max-width: 500px;
+}
+
+/* 스플래시 스크린 */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #FFAAA5 0%, #FFD3B6 50%, #FF8B94 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+}
+
+#splash-screen.fade-out {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.splash-content { text-align: center; color: #ffffff; }
+.splash-logo { font-size: 64px; margin-bottom: 12px; }
+.splash-title { font-size: 32px; font-weight: bold; margin: 0 0 8px 0; color: #ffffff; }
+.splash-sub { font-size: 16px; margin: 0; opacity: 0.9; }
+
+/* 브랜드 로고 */
+.brand-logo {
+    font-size: 20px;
+    font-weight: bold;
+    color: lightcoral;
+}
+
+/* 👈 정보 입력 상단 이모지 아이콘 대형화 */
+.profile-avatar-large {
+    font-size: 48px;
+    line-height: 1;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+/* ==========================================
+   2. 카드 상자 공통 스타일
+   ========================================== */
+.card-box, #block1 {
+    background-color: rgba(250, 250, 210, 0.94);
+    backdrop-filter: blur(8px);
+    padding: 36px 24px;
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.hidden { display: none !important; }
+
+h1 { font-size: 22px; line-height: 1.5; margin: 4px 0; word-break: keep-all; text-align: center; }
+.highlight-text { color: #e65100; font-size: 21px; }
+.index-subtext { font-size: 14px; color: #555555; line-height: 1.6; margin: 0; word-break: keep-all; text-align: center; }
+
+/* ==========================================
+   3. 인적사항 입력 폼 & 키워드 칩
+   ========================================== */
+.input-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    margin-top: 10px;
+}
+
+.input-form label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #444444;
+}
+
+.info-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #dddddd;
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+    background-color: #ffffff;
+}
+
+.keyword-chip-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.chip-btn {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.chip-btn.active {
+    background-color: lightcoral;
+    color: #ffffff;
+    border-color: lightcoral;
+}
+
+.mt-10 { margin-top: 10px; }
+
+/* 버튼 스타일 */
+.button-group { display: flex; flex-direction: column; gap: 10px; width: 100%; align-items: center; margin-top: 6px; }
+
+.button {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 25px;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: #ffffff;
+    color: #333333;
+    transition: transform 0.2s, opacity 0.2s;
+    box-sizing: border-box;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    text-align: center;
+}
+
+.button:hover { transform: translateY(-2px); opacity: 0.9; }
+.primary-btn { background-color: #ffffff; border: 2px solid lightcoral; color: #333333; }
+.secondary-btn { background-color: #ffffff; border: 1px solid #cccccc; }
+
+/* 아기 비주얼 일러스트 */
+.baby-illustration-box {
+    position: relative;
+    background-color: #ffffff;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    border: 4px solid #ffffff;
+    margin-top: 10px;
+}
+
+.baby-emoji { font-size: 50px; }
+
+/* ==========================================
+   4. pregnant, senior 페이지 스타일
+   ========================================== */
+textarea { width: 100%; height: 180px; padding: 16px; box-sizing: border-box; border-radius: 14px; border: 1px solid #e0e0e0; font-family: inherit; font-size: 15px; line-height: 1.6; background-color: #ffffff; resize: none; outline: none; white-space: pre-wrap; overflow-wrap: break-word; word-break: keep-all; text-align: left; }
+textarea:focus { border-color: lightcoral; }
+.spinner { width: 45px; height: 45px; border: 4px solid #ffffff; border-top: 4px solid lightcoral; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.loading-text { line-height: 1.6; font-size: 15px; margin: 0; }
+.tag-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.tag { background-color: #ffffff; color: #555555; padding: 6px 12px; border-radius: 15px; font-size: 13px; font-weight: bold; }
+.experience-card-list, .mentor-header, .audio-container, .letter-box, .notice-box, .thank-btn-group, #thank-section { width: 100%; }
+.experience-card { background-color: #ffffff; border-radius: 14px; padding: 18px; text-align: left; box-sizing: border-box; }
+.mentor-info { font-size: 16px; margin-bottom: 8px; }
+.age { font-size: 14px; color: #777777; font-weight: normal; }
+.summary { font-size: 14px; line-height: 1.5; color: #444444; margin: 0 0 14px 0; }
+.audio-container { background-color: #ffffff; padding: 12px 16px; border-radius: 12px; box-sizing: border-box; }
+.audio-label { font-size: 13px; margin: 0 0 8px 0; color: #555555; }
+audio { width: 100%; height: 36px; }
+.letter-box { text-align: left; background-color: #ffffff; padding: 20px; border-radius: 12px; line-height: 1.8; font-size: 15px; box-sizing: border-box; border-left: 5px solid lightcoral; }
+.letter-box p { margin: 0 0 12px 0; }
+.notice-box { text-align: left; font-size: 12px; line-height: 1.6; color: #666666; background-color: rgba(255, 255, 255, 0.7); padding: 12px 16px; border-radius: 8px; box-sizing: border-box; }
+.notice-edit { margin: 0 0 6px 0; }
+.notice-warning { margin: 0; color: #777777; }
+.divider { width: 100%; border: none; border-top: 1px dashed #cccccc; margin: 10px 0; }
+.thank-btn-group { display: flex; flex-direction: column; gap: 10px; }
+.thank-btn { background-color: #ffffff; border: 1px solid #dddddd; }
+.complete-msg { width: 100%; margin-top: 20px; padding: 16px; background-color: #ffffff; color: #2e7d32; border-radius: 12px; font-size: 14px; line-height: 1.6; box-sizing: border-box; }
+
+.senior-card { border: 3px solid #e6a200; padding: 36px 24px; gap: 22px; }
+.question-badge { background-color: #e65100; color: #ffffff; font-size: 16px; font-weight: bold; padding: 6px 16px; border-radius: 20px; }
+.senior-question-title { font-size: 25px; line-height: 1.6; color: #111111; }
+.senior-guide { font-size: 20px; line-height: 1.6; margin: 0; color: #222222; }
+.senior-mic-btn { width: 200px; height: 200px; border-radius: 50%; background-color: lightcoral; color: #ffffff; border: 6px solid #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); transition: all 0.2s ease; }
+.senior-mic-btn .mic-icon { font-size: 56px; }
+.senior-mic-btn #mic-btn-label { font-size: 20px; font-weight: bold; }
+.senior-mic-btn.recording { background-color: #d32f2f; animation: pulse-ring 1.3s infinite; }
+@keyframes pulse-ring { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.5); } 70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(211, 47, 47, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); } }
+.status-text { font-size: 20px; font-weight: bold; color: #d32f2f; display: flex; align-items: center; gap: 8px; }
+.pulse-dot { width: 14px; height: 14px; background-color: #d32f2f; border-radius: 50%; display: inline-block; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+.senior-stt-box { width: 100%; background-color: #ffffff; border: 1px solid #cccccc; border-radius: 14px; padding: 18px; text-align: left; box-sizing: border-box; }
+.stt-title { font-size: 16px; font-weight: bold; color: #666666; margin: 0 0 8px 0; }
+.stt-content { font-size: 22px; line-height: 1.6; color: #111111; margin: 0; word-break: keep-all; }
+.senior-action-btn { width: 100%; padding: 18px 24px; background-color: #2e7d32; color: #ffffff; font-size: 22px; }
+.thank-icon { font-size: 56px; }
+.senior-thank-title { font-size: 24px; color: #2e7d32; }
+.senior-thank-box { background-color: #ffffff; border: 1px solid #a5d6a7; border-radius: 14px; padding: 20px; font-size: 20px; line-height: 1.6; color: #1b5e20; word-break: keep-all; width: 100%; box-sizing: border-box; }

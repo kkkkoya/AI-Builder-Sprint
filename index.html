@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이어봄</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+</head>
+<body class="fade-in">
+
+    <!-- 📱 1. 앱 스플래시 스크린 -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-logo">🌸</div>
+            <h1 class="splash-title">이어봄</h1>
+            <p class="splash-sub">세대와 세대를 이어보다</p>
+        </div>
+    </div>
+
+    <main class="container">
+        <!-- 📱 2. 초기 모드 선택 단계 -->
+        <section id="mode-select-step" class="card-box app-main-card">
+            <div class="brand-logo">🌸 이어봄</div>
+            <h1 id="index-h1">누구이신가요?<br>모드를 선택해 주세요.</h1>
+            <p class="index-subtext">
+                당신의 소중한 이야기와 경험을 기다립니다.
+            </p>
+
+            <div class="button-group hero-btn-group">
+                <button class="button primary-btn app-mode-btn" id="select-pregnant-btn">
+                    <span class="mode-emoji">🤰</span>
+                    <span>임산부입니다</span>
+                </button>
+                <button class="button secondary-btn app-mode-btn" id="select-senior-btn">
+                    <span class="mode-emoji">👵</span>
+                    <span>어르신입니다</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 📱 3-A. 임산부 인적사항 입력 단계 -->
+        <section id="pregnant-info-step" class="card-box app-main-card hidden">
+            <span class="profile-avatar-large">🤰</span>
+            <h2>임산부 정보 입력</h2>
+            <p class="index-subtext">원활한 소통을 위해 간단한 정보를 알려주세요.</p>
+
+            <div class="input-form">
+                <label for="preg-name">이름 (또는 닉네임)</label>
+                <input type="text" id="preg-name" placeholder="예: 지혜맘" class="info-input">
+
+                <label for="preg-status">현재 상태</label>
+                <select id="preg-status" class="info-input">
+                    <option value="임신 초기">임신 초기 (1~12주)</option>
+                    <option value="임신 중기">임신 중기 (13~27주)</option>
+                    <option value="임신 후기">임신 후기 (28주 이상)</option>
+                    <option value="출산 준비 중">출산 준비 중</option>
+                </select>
+            </div>
+
+            <button id="start-pregnant-btn" class="button primary-btn mt-10">시작하기 ✨</button>
+        </section>
+
+        <!-- 📱 3-B. 어르신 인적사항 입력 단계 (키워드 5개 추가) -->
+        <section id="senior-info-step" class="card-box app-main-card hidden">
+            <span class="profile-avatar-large">👵</span>
+            <h2>어르신 정보 입력</h2>
+            <p class="index-subtext">따뜻한 지혜를 들려주실 어르신의 정보입니다.</p>
+
+            <div class="input-form">
+                <label for="senior-name">성함</label>
+                <input type="text" id="senior-name" placeholder="예: 김정희" class="info-input">
+
+                <label for="senior-age">연령</label>
+                <input type="number" id="senior-age" placeholder="예: 72" class="info-input">
+
+                <label>나누고 싶은 경험 키워드 (선택)</label>
+                <div class="keyword-chip-group">
+                    <button class="chip-btn" data-tag="첫출산">#첫출산</button>
+                    <button class="chip-btn" data-tag="독박육아">#독박육아</button>
+                    <button class="chip-btn" data-tag="산후우울">#산후우울</button>
+                    <button class="chip-btn" data-tag="맞벌이육아">#맞벌이육아</button>
+                    <!-- ✨ 추가된 키워드 5개 -->
+                    <button class="chip-btn" data-tag="경력단절">#경력단절</button>
+                    <button class="chip-btn" data-tag="부부갈등">#부부갈등</button>
+                    <button class="chip-btn" data-tag="다자녀육아">#다자녀육아</button>
+                    <button class="chip-btn" data-tag="자녀교육">#자녀교육</button>
+                    <button class="chip-btn" data-tag="가족관계">#가족관계</button>
+                </div>
+            </div>
+
+            <button id="start-senior-btn" class="button primary-btn mt-10">지혜 들려주러 가기 🎙️</button>
+        </section>
+
+        <!-- 📱 4. 메인 비주얼 화면 (상단 뱃지 및 아기 말풍선 텍스트 삭제) -->
+        <section id="main-hero-step" class="card-box hero-card hidden">
+            <h1 id="hero-title">
+                우리 아이와 만나는<br>
+                설레는 순간부터,<br>
+                <span class="highlight-text">어르신의 따뜻한 지혜와 함께</span>
+            </h1>
+            
+            <p id="hero-subtext" class="index-subtext">
+                초보 엄마의 불안한 고민을 자녀를 키워낸 어르신의 생생한 삶의 경험과 따뜻하게 연결해 드립니다.
+            </p>
+
+            <button id="go-mode-page-btn" class="button primary-btn mt-10">바로 가기 🌸</button>
+
+            <!-- 말풍선 텍스트 제거 및 깔끔한 아기 비주얼만 유지 -->
+            <div class="baby-illustration-box">
+                <span class="baby-emoji">👶🏻</span>
+            </div>
+        </section>
+    </main>
+
+    <script src="ui.js"></script>
+</body>
+</html>

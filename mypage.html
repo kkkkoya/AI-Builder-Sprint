@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>이어봄 - 마이페이지</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <main class="container">
+        <!-- 상단 헤더 -->
+        <header class="page-header">
+            <button id="mypage-home-btn" class="button back-btn">‹ 메인으로</button>
+            <div class="brand-logo">🌸 이어봄</div>
+        </header>
+
+        <!-- 마이페이지 카드 상자 -->
+        <div class="card-box mypage-card">
+            <div class="profile-header">
+                <span class="profile-avatar">👤</span>
+                <h2>내 활동 기록</h2>
+                <p class="mypage-sub">공유한 고민과 전달받은 따뜻한 답변들입니다.</p>
+            </div>
+
+            <!-- 탭 메뉴 -->
+            <div class="tab-group">
+                <button id="tab-questions" class="tab-btn active">내가 공유한 고민 💌</button>
+                <button id="tab-answers" class="tab-btn">답변한 내용 🎧</button>
+            </div>
+
+            <!-- 1. 내가 공유한 고민 목록 -->
+            <div id="question-list-section" class="history-list">
+                <div class="history-item">
+                    <div class="item-header">
+                        <span class="item-tag">#출산두려움</span>
+                        <span class="item-date">2026.07.30</span>
+                    </div>
+                    <p class="item-content">
+                        "첫 아이를 가지게 되어 너무 기쁘지만, 한편으로는 출산 시 통증과 엄마가 될 준비가 되어있는지 너무 두렵고 막막합니다."
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. 답변한 내용 목록 (산모의 감사 반응 표시) -->
+            <div id="answer-list-section" class="history-list hidden">
+                <div class="history-item answer-item">
+                    <div class="summary-box">
+                        <strong>💡 고민 한 줄 요약:</strong> "첫 아이 출산에 대한 두려움과 막막함"
+                    </div>
+                    <div class="audio-container">
+                        <p class="audio-label">🎧 어르신의 원본 음성 답변</p>
+                        <audio controls>
+                            <source src="" type="audio/mpeg">
+                            오디오를 지원하지 않는 브라우저입니다.
+                        </audio>
+                    </div>
+                    <div class="answer-content-box">
+                        <p class="answer-title">✉️ 정리된 답변 내용</p>
+                        <p class="answer-text">
+                            "첫애를 가졌을 때 나도 참 무서웠단다. 밤마다 눈물이 나기도 했지만 아기 얼굴을 보고 함께 시간을 보내다 보니 자연스럽게 엄마가 되더라고. 너무 걱정하지 마렴, 당신은 충분히 잘해낼 거야."
+                        </p>
+                    </div>
+
+                    <!-- 💌 산모가 선택해 전달한 감사 반응 -->
+                    <div class="reaction-result-box">
+                        <p class="reaction-title">💌 산모가 전달한 감사 마음:</p>
+                        <p id="mypage-reaction-text" class="reaction-badge">아직 전달된 감사 마음이 없습니다 💌</p>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- 🚪 마이페이지 최하단 로그아웃 버튼 -->
+            <button id="logout-btn" class="button auth-btn logout-style mypage-logout-btn">로그아웃</button>
+        </div>
+    </main>
+
+    <script src="ui.js"></script>
+</body>
+</html>

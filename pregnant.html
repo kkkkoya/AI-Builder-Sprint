@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이어봄 - 임산부 모드</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+</head>
+<body class="fade-in">
+
+    <main class="container">
+        <!-- 1단계: 고민 작성하기 -->
+        <section id="step1-section" class="card-box">
+            <div class="baby-welcome-header">
+                <span class="baby-icon-large">👶🏻</span>
+                <h1>어떤 마음이 들고 계시나요?<br>당신의 고민을 들려주세요.</h1>
+            </div>
+            <textarea id="pregnancy-input" placeholder="출산에 대한 두려움, 엄마가 된다는 부담감 등 어떤 이야기든 괜찮아요."></textarea>
+            <button id="submit-question-btn" class="button primary-btn">내 고민 전달하기</button>
+        </section>
+
+        <!-- 2-A단계: AI 고민 분석 로딩 -->
+        <section id="ai-analyzing-loading" class="card-box hidden">
+            <div class="spinner"></div>
+            <p class="loading-text">AI가 고민을 분석하고,<br>어르신의 경험 아카이브에서 지혜를 찾고 있습니다...</p>
+        </section>
+
+        <!-- 2-B단계: 추천 경험 카드 목록 -->
+        <section id="recommended-card-section" class="card-box hidden">
+            <h2>고민과 관련된 지혜로운 경험들</h2>
+            <div id="issue-tags" class="tag-group">
+                <span class="tag">#첫출산</span>
+                <span class="tag">#출산두려움</span>
+                <span class="tag">#독박육아</span>
+            </div>
+
+            <div class="experience-card-list">
+                <div class="experience-card">
+                    <div class="mentor-info">
+                        <strong>김정희 멘토</strong> <span class="age">(72세)</span>
+                    </div>
+                    <p class="summary">"첫아이를 낳았을 때 남편이 늦게 들어와 너무 무서웠지만..."</p>
+                    <button class="button secondary-btn view-letter-btn">이 어르신의 경험 편지 읽기</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3단계 & 4단계: 편지 읽기 & 감사 전달 -->
+        <section id="letter-detail-section" class="card-box hidden">
+            <button id="reset-btn" class="button back-btn">✏️ 다른 고민 다시 적기</button>
+
+            <div class="mentor-header">
+                <h2>김정희 멘토님 <span class="age">(72세)</span>의 경험 편지</h2>
+                <div class="tag-group">
+                    <span class="tag">#첫출산</span>
+                    <span class="tag">#독박육아</span>
+                </div>
+            </div>
+
+            <div class="audio-container">
+                <p class="audio-label">🎧 어르신 원본 음성 들으시려면 재생 버튼을 누르세요</p>
+                <audio id="audio-player" controls>
+                    <source src="" type="audio/mpeg">
+                    브라우저가 오디오 재생을 지원하지 않습니다.
+                </audio>
+            </div>
+
+            <div id="ai-letter-content" class="letter-box">
+                <p>저도 처음 첫아이를 품에 안았을 때는 세상에 혼자 남겨진 것처럼 두렵고 무서웠답니다.</p>
+                <p>아기가 밤새 울면 내가 무슨 잘못을 했나 싶어 같이 목놓아 울던 밤도 참 많았어요. 하지만 시간이 지나고 돌아보니, 그 막막함은 엄마로서 자연스럽게 겪어내는 첫 계단이었더라고요.</p>
+                <p>지금 느끼시는 두려움은 너무나 당연한 마음이니, 스스로를 너무 자책하거나 조급해하지 않으셨으면 좋겠습니다. 당신은 이미 충분히 좋은 엄마입니다.</p>
+            </div>
+
+            <div id="safety-notice-box" class="notice-box">
+                <p class="notice-edit">💡 <strong>AI 정련 내역:</strong> 어르신의 구어체 표현 중 반복되는 문장을 정리하고 문맥을 읽기 쉽게 다듬었습니다.</p>
+                <p class="notice-warning">※ 본 답변은 개인의 경험이며, 의학적 판단이 필요한 경우 전문 의료기관 상담을 권장합니다.</p>
+            </div>
+
+            <hr class="divider">
+
+            <section id="thank-section">
+                <h3>어르신의 경험이 도움이 되셨나요?<br>따뜻한 마음을 전해보세요.</h3>
+                <div class="thank-btn-group">
+                    <button class="button thank-btn" data-type="1">마음이 편해졌어요 😌</button>
+                    <button class="button thank-btn" data-type="2">큰 용기를 얻었어요 💪</button>
+                    <button class="button thank-btn" data-type="3">혼자가 아니라는 생각이 들어요 🤝</button>
+                </div>
+
+                <div id="thank-complete-msg" class="complete-msg hidden">
+                    <p>✨ 감사 메시지가 어르신께 전달되었습니다.<br>당신의 내일을 <strong>이어봄</strong>이 응원합니다.</p>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script src="ui.js"></script>
+</body>
+</html>
