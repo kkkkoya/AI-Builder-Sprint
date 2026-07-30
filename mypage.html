@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이어봄 - 프로필</title>
+    <title>이어봄 - 마이페이지</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
 </head>
@@ -18,9 +18,9 @@
         </div>
     </div>
 
-    <!-- 📱 마이페이지 상단 헤더: 좌측 [‹ 닫기] | 우측 [🌸 이어봄] -->
-    <header class="mypage-top-header">
-        <button id="mypage-back-btn" class="button back-btn header-close-btn">‹ 닫기</button>
+    <!-- 📱 마이페이지 전용 전체 상단 헤더 (화면 위 양 옆 고정) -->
+    <header class="global-top-header">
+        <button id="mypage-back-btn" class="button header-close-btn">‹ 닫기</button>
         <div class="brand-logo">🌸 이어봄</div>
     </header>
 
@@ -35,9 +35,9 @@
 
             <hr class="divider">
 
-            <!-- 모드별 활동 기록 스크롤 목록 영역 -->
+            <!-- 활동 기록 영역 -->
             <div id="history-scroll-container" class="history-scroll-box">
-                <!-- 🤰 임산부 모드 히스토리 뷰 -->
+                <!-- 🤰 임산부 모드 히스토리 -->
                 <div id="pregnant-history-view" class="history-list hidden">
                     <h3>💌 남긴 고민 & 어르신의 답변 기록</h3>
                     
@@ -68,7 +68,7 @@
                     </div>
                 </div>
 
-                <!-- 👵 어르신 모드 히스토리 뷰 -->
+                <!-- 👵 어르신 모드 히스토리 -->
                 <div id="senior-history-view" class="history-list hidden">
                     <h3>🎙️ 내가 들려준 지혜 기록</h3>
 
