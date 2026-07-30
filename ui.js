@@ -1,17 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     /* ==========================================
-       1. 스플래시 스크린 타이머 (1.5초)
+       1. 스플래시 스크린 타이머 (최초 1.2초 후 종료)
        ========================================== */
     const splashScreen = document.getElementById('splash-screen');
+    const isLogoutTransition = sessionStorage.getItem('isLogoutTransition') === 'true';
+
     if (splashScreen) {
-        setTimeout(() => {
-            splashScreen.classList.add('fade-out');
-        }, 1500);
+        if (isLogoutTransition) {
+            // 로그아웃 후 복귀 시 스플래시 연출 처리 후 키 삭제
+            sessionStorage.removeItem('isLogoutTransition');
+            setTimeout(() => {
+                splashScreen.classList.add('fade-out');
+            }, 1200);
+        } else {
+            // 일반 접속 시
+            setTimeout(() => {
+                splashScreen.classList.add('fade-out');
+            }, 1200);
+        }
     }
 
     /* ==========================================
-       2. 인적사항 작성 및 메인 화면 전환
+       2. 메인 페이지 상태 및 프로필 제어 (index.html)
        ========================================== */
     const modeSelectStep = document.getElementById('mode-select-step');
     const pregnantInfoStep = document.getElementById('pregnant-info-step');
@@ -20,12 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const selectPregnantBtn = document.getElementById('select-pregnant-btn');
     const selectSeniorBtn = document.getElementById('select-senior-btn');
-
     const startPregnantBtn = document.getElementById('start-pregnant-btn');
     const startSeniorBtn = document.getElementById('start-senior-btn');
     const goModePageBtn = document.getElementById('go-mode-page-btn');
 
-    let selectedTargetPage = 'pregnant.html';
+    const mainProfileBtn = document.getElementById('main-profile-btn');
 
     function switchStep(fromStep, toStep) {
         if (fromStep) fromStep.classList.add('hidden');
@@ -35,24 +45,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function checkUserRegistration() {
+        const isRegistered = localStorage.getItem('isRegistered') === 'true';
+        const userRole = localStorage.getItem('userRole');
+
+        if (isRegistered && mainHeroStep) {
+            if (modeSelectStep) modeSelectStep.classList.add('hidden');
+            if (pregnantInfoStep) pregnantInfoStep.classList.add('hidden');
+            if (seniorInfoStep) seniorInfoStep.classList.add('hidden');
+
+            mainHeroStep.classList.remove('hidden');
+            if (mainProfileBtn) mainProfileBtn.classList.remove('hidden');
+
+            if (userRole === 'pregnant') {
+                const name = localStorage.getItem('userName') || '산모';
+                document.getElementById('hero-title').innerHTML = `<strong>${name}님</strong>, 반갑습니다!<br>어르신의 지혜를 나눠드립니다.`;
+                goModePageBtn.textContent = '고민 나누러 가기 🤰';
+            } else if (userRole === 'senior') {
+                const name = localStorage.getItem('seniorName') || '어르신';
+                const age = localStorage.getItem('seniorAge') || '70';
+                document.getElementById('hero-title').innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
+                goModePageBtn.textContent = '지혜 들려주러 가기 👵';
+            }
+        }
+    }
+
+    checkUserRegistration();
+
     if (selectPregnantBtn) {
         selectPregnantBtn.addEventListener('click', () => {
-            selectedTargetPage = 'pregnant.html';
             switchStep(modeSelectStep, pregnantInfoStep);
         });
     }
 
     if (selectSeniorBtn) {
         selectSeniorBtn.addEventListener('click', () => {
-            selectedTargetPage = 'senior.html';
             switchStep(modeSelectStep, seniorInfoStep);
         });
     }
 
     const chipBtns = document.querySelectorAll('.chip-btn');
+    const selectedKeywords = [];
     chipBtns.forEach(chip => {
         chip.addEventListener('click', () => {
             chip.classList.toggle('active');
+            const tag = chip.getAttribute('data-tag');
+            if (chip.classList.contains('active')) {
+                selectedKeywords.push(tag);
+            } else {
+                const idx = selectedKeywords.indexOf(tag);
+                if (idx > -1) selectedKeywords.splice(idx, 1);
+            }
         });
     });
 
@@ -61,12 +104,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('preg-name').value.trim() || '지혜맘';
             const status = document.getElementById('preg-status').value;
 
+            localStorage.setItem('isRegistered', 'true');
+            localStorage.setItem('userRole', 'pregnant');
             localStorage.setItem('userName', name);
             localStorage.setItem('userStatus', status);
 
             document.getElementById('hero-title').innerHTML = `<strong>${name}님</strong>, 반갑습니다!<br>어르신의 지혜를 나눠드립니다.`;
             goModePageBtn.textContent = '고민 나누러 가기 🤰';
 
+            if (mainProfileBtn) mainProfileBtn.classList.remove('hidden');
             switchStep(pregnantInfoStep, mainHeroStep);
         });
     }
@@ -76,24 +122,100 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('senior-name').value.trim() || '김정희';
             const age = document.getElementById('senior-age').value.trim() || '72';
 
+            localStorage.setItem('isRegistered', 'true');
+            localStorage.setItem('userRole', 'senior');
             localStorage.setItem('seniorName', name);
             localStorage.setItem('seniorAge', age);
+            localStorage.setItem('seniorKeywords', JSON.stringify(selectedKeywords));
 
             document.getElementById('hero-title').innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
             goModePageBtn.textContent = '지혜 들려주러 가기 👵';
 
+            if (mainProfileBtn) mainProfileBtn.classList.remove('hidden');
             switchStep(seniorInfoStep, mainHeroStep);
+        });
+    }
+
+    if (mainProfileBtn) {
+        mainProfileBtn.addEventListener('click', () => {
+            window.location.href = 'mypage.html';
         });
     }
 
     if (goModePageBtn) {
         goModePageBtn.addEventListener('click', () => {
-            window.location.href = selectedTargetPage;
+            const role = localStorage.getItem('userRole');
+            if (role === 'pregnant') {
+                window.location.href = 'pregnant.html';
+            } else {
+                window.location.href = 'senior.html';
+            }
         });
     }
 
     /* ==========================================
-       3. pregnant.html 모드 기능
+       3. 마이페이지 화면 및 로그아웃 단일화 (mypage.html)
+       ========================================== */
+    const profileUserName = document.getElementById('profile-user-name');
+    const profileUserDetail = document.getElementById('profile-user-detail');
+    const profileUserAvatar = document.getElementById('profile-user-avatar');
+
+    const pregnantHistoryView = document.getElementById('pregnant-history-view');
+    const seniorHistoryView = document.getElementById('senior-history-view');
+    const mypageBackBtn = document.getElementById('mypage-back-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    if (profileUserName) {
+        const userRole = localStorage.getItem('userRole');
+
+        if (userRole === 'pregnant') {
+            const name = localStorage.getItem('userName') || '지혜맘';
+            const status = localStorage.getItem('userStatus') || '임신 중';
+
+            profileUserAvatar.textContent = '🤰';
+            profileUserName.textContent = `${name} 님`;
+            profileUserDetail.textContent = `상태: ${status}`;
+
+            if (pregnantHistoryView) pregnantHistoryView.classList.remove('hidden');
+            if (seniorHistoryView) seniorHistoryView.classList.add('hidden');
+
+        } else if (userRole === 'senior') {
+            const name = localStorage.getItem('seniorName') || '김정희';
+            const age = localStorage.getItem('seniorAge') || '72';
+            const rawKeywords = localStorage.getItem('seniorKeywords');
+            let keywordsText = '';
+
+            if (rawKeywords) {
+                const arr = JSON.parse(rawKeywords);
+                if (arr.length > 0) keywordsText = ` | 희망 경험: #${arr.join(' #')}`;
+            }
+
+            profileUserAvatar.textContent = '👵';
+            profileUserName.textContent = `${name} 멘토님`;
+            profileUserDetail.textContent = `연령: ${age}세${keywordsText}`;
+
+            if (seniorHistoryView) seniorHistoryView.classList.remove('hidden');
+            if (pregnantHistoryView) pregnantHistoryView.classList.add('hidden');
+        }
+    }
+
+    if (mypageBackBtn) {
+        mypageBackBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    }
+
+    // 🚪 로그아웃 처리 (1회 이중 연출 제거 및 단일 스플래시 전환)
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            sessionStorage.setItem('isLogoutTransition', 'true');
+            window.location.href = 'index.html';
+        });
+    }
+
+    /* ==========================================
+       4. pregnant.html 모드 기능 & '처음으로' 이동
        ========================================== */
     const step1Section = document.getElementById('step1-section');
     const pregnancyInput = document.getElementById('pregnancy-input');
@@ -105,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     const thankBtns = document.querySelectorAll('.thank-btn');
     const thankCompleteMsg = document.getElementById('thank-complete-msg');
+    const pregnantHomeCompleteBtn = document.getElementById('pregnant-home-complete-btn');
 
     if (submitBtn) {
         submitBtn.addEventListener('click', () => {
@@ -160,8 +283,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 임산부 최종 완료 후 '처음으로' 클릭 시 메인 입력창 복귀
+    if (pregnantHomeCompleteBtn) {
+        pregnantHomeCompleteBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    }
+
     /* ==========================================
-       4. senior.html 어르신 녹음 모드 기능
+       5. senior.html 녹음 모드 기능 & '처음으로' 이동
        ========================================== */
     const micBtn = document.getElementById('mic-btn');
     const micBtnLabel = document.getElementById('mic-btn-label');
@@ -174,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recordSection = document.getElementById('record-section');
     const thankYouSection = document.getElementById('thank-you-section');
     const seniorResetBtn = document.getElementById('senior-reset-btn');
+    const seniorHomeCompleteBtn = document.getElementById('senior-home-complete-btn');
 
     let isRecording = false;
 
@@ -216,6 +347,13 @@ document.addEventListener('DOMContentLoaded', () => {
             thankYouSection.classList.add('hidden');
             questionSection.classList.remove('hidden');
             recordSection.classList.remove('hidden');
+        });
+    }
+
+    // 어르신 최종 완료 후 '처음으로' 클릭 시 메인 입력창 복귀
+    if (seniorHomeCompleteBtn) {
+        seniorHomeCompleteBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
         });
     }
 });

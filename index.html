@@ -18,10 +18,15 @@
         </div>
     </div>
 
+    <!-- 📱 전체 화면 기준 상단 헤더 (전체 화면 맨 위 좌/우 고정) -->
+    <header class="global-top-header">
+        <div class="brand-logo">🌸 이어봄</div>
+        <button id="main-profile-btn" class="button profile-top-btn hidden">👤 프로필</button>
+    </header>
+
     <main class="container">
         <!-- 📱 2. 초기 모드 선택 단계 -->
         <section id="mode-select-step" class="card-box app-main-card">
-            <div class="brand-logo">🌸 이어봄</div>
             <h1 id="index-h1">누구이신가요?<br>모드를 선택해 주세요.</h1>
             <p class="index-subtext">
                 당신의 소중한 이야기와 경험을 기다립니다.
@@ -51,9 +56,9 @@
 
                 <label for="preg-status">현재 상태</label>
                 <select id="preg-status" class="info-input">
-                    <option value="임신 초기">임신 초기 (1~12주)</option>
-                    <option value="임신 중기">임신 중기 (13~27주)</option>
-                    <option value="임신 후기">임신 후기 (28주 이상)</option>
+                    <option value="임신 초기 (1~12주)">임신 초기 (1~12주)</option>
+                    <option value="임신 중기 (13~27주)">임신 중기 (13~27주)</option>
+                    <option value="임신 후기 (28주 이상)">임신 후기 (28주 이상)</option>
                     <option value="출산 준비 중">출산 준비 중</option>
                 </select>
             </div>
@@ -61,7 +66,7 @@
             <button id="start-pregnant-btn" class="button primary-btn mt-10">시작하기 ✨</button>
         </section>
 
-        <!-- 📱 3-B. 어르신 인적사항 입력 단계 (키워드 5개 추가) -->
+        <!-- 📱 3-B. 어르신 인적사항 입력 단계 -->
         <section id="senior-info-step" class="card-box app-main-card hidden">
             <span class="profile-avatar-large">👵</span>
             <h2>어르신 정보 입력</h2>
@@ -80,7 +85,6 @@
                     <button class="chip-btn" data-tag="독박육아">#독박육아</button>
                     <button class="chip-btn" data-tag="산후우울">#산후우울</button>
                     <button class="chip-btn" data-tag="맞벌이육아">#맞벌이육아</button>
-                    <!-- ✨ 추가된 키워드 5개 -->
                     <button class="chip-btn" data-tag="경력단절">#경력단절</button>
                     <button class="chip-btn" data-tag="부부갈등">#부부갈등</button>
                     <button class="chip-btn" data-tag="다자녀육아">#다자녀육아</button>
@@ -92,7 +96,7 @@
             <button id="start-senior-btn" class="button primary-btn mt-10">지혜 들려주러 가기 🎙️</button>
         </section>
 
-        <!-- 📱 4. 메인 비주얼 화면 (상단 뱃지 및 아기 말풍선 텍스트 삭제) -->
+        <!-- 📱 4. 메인 비주얼 화면 -->
         <section id="main-hero-step" class="card-box hero-card hidden">
             <h1 id="hero-title">
                 우리 아이와 만나는<br>
@@ -106,7 +110,6 @@
 
             <button id="go-mode-page-btn" class="button primary-btn mt-10">바로 가기 🌸</button>
 
-            <!-- 말풍선 텍스트 제거 및 깔끔한 아기 비주얼만 유지 -->
             <div class="baby-illustration-box">
                 <span class="baby-emoji">👶🏻</span>
             </div>
