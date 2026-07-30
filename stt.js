@@ -1,42 +1,107 @@
 // stt.js
 
-// 1. 브라우저가 음성 인식을 지원하는지 확인합니다.
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
+let recognition = null;
 
-if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.continuous = false; // 한 번 말씀하시고 쉬면 자동으로 녹음 종료
-    recognition.lang = 'ko-KR'; // 한국어 설정
-    recognition.interimResults = false; // 중간 과정은 무시하고 최종 완성된 문장만 가져옴
-} else {
-    console.error("이 브라우저는 음성 인식을 지원하지 않습니다. 크롬(Chrome)을 사용해주세요.");
+/**
+ * Web Speech API 지원 여부 확인
+ */
+export function isSpeechRecognitionSupported() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
-// 2. 녹음을 시작하고, 결과 글자를 우리 프로그램으로 전달하는 함수
-function startRecording(onResultCallback) {
-    if (!recognition) {
-        alert("음성 인식이 지원되지 않는 브라우저입니다. 크롬(Chrome)을 사용해주세요!");
-        return;
+/**
+ * 음성 인식 시작
+ */
+export function startSpeechRecognition({
+  onStart,
+  onInterimResult,
+  onFinalResult,
+  onError,
+  onEnd,
+}) {
+  const transcriptInput = document.getElementById("transcriptInput") || document.getElementById("stt-text-content");
+  const errorMsgContainer = document.getElementById("stt-error-msg") || document.getElementById("status-label");
+
+  // 미지원 브라우저 처리
+  if (!isSpeechRecognitionSupported()) {
+    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
+    if (onError) onError(new Error("Speech recognition not supported"));
+    return null;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "ko-KR";
+
+  let finalTranscript = "";
+
+  recognition.onstart = () => {
+    if (onStart) onStart();
+  };
+
+  recognition.onresult = (event) => {
+    let interimTranscript = "";
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcriptText = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcriptText;
+        if (onFinalResult) onFinalResult(finalTranscript);
+      } else {
+        interimTranscript += transcriptText;
+        if (onInterimResult) onInterimResult(interimTranscript);
+      }
     }
+  };
 
-    // 마이크 녹음 시작
+  recognition.onerror = (event) => {
+    console.error("[STT Error]:", event.error);
+    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
+    if (onError) onError(event);
+  };
+
+  recognition.onend = () => {
+    if (onEnd) onEnd(finalTranscript);
+  };
+
+  try {
     recognition.start();
-    console.log("마이크 녹음이 시작되었습니다...");
+  } catch (err) {
+    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
+    if (onError) onError(err);
+  }
 
-    // 3. 어르신이 말씀을 끝내고 음성 인식이 성공적으로 완료되었을 때
-    recognition.onresult = function(event) {
-        // 변환된 텍스트(글자)를 추출합니다.
-        const transcript = event.results[0][0].transcript;
-        console.log("인식된 음성:", transcript);
-        
-        // 추출한 글자를 결과 처리 함수(콜백)로 넘겨줍니다.
-        onResultCallback(transcript);
-    };
+  return recognition;
+}
 
-    // 4. 에러가 발생했을 때
-    recognition.onerror = function(event) {
-        console.error("음성 인식 에러 발생:", event.error);
-        alert("마이크 연결을 확인하거나 다시 시도해주세요.");
-    };
+/**
+ * 음성 인식 종료
+ */
+export function stopSpeechRecognition() {
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
+}
+
+/**
+ * 실패 및 미지원 시 대체 입력 활성화 UI 헬퍼
+ */
+function showFallbackUI(message, transcriptInput, errorContainer) {
+  if (errorContainer) {
+    errorContainer.innerText = message;
+    errorContainer.classList.remove("hidden");
+  } else {
+    alert(message);
+  }
+
+  if (transcriptInput) {
+    transcriptInput.disabled = false;
+    transcriptInput.readOnly = false;
+    transcriptInput.focus();
+    if (transcriptInput.tagName === "TEXTAREA" || transcriptInput.tagName === "INPUT") {
+      transcriptInput.placeholder = "이곳에 경험을 직접 입력해 주세요...";
+    }
+  }
 }

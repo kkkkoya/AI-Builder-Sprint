@@ -1,400 +1,359 @@
-// C팀원 멘토 데이터 전역 관리용
-let globalMentorsList = [];
+// ui.js
 
-// [이 어르신의 경험 편지 읽기] 클릭 시 C팀원의 편지(letter) 세부 내용을 화면에 출력하는 함수
-window.openMentorLetter = function(mentorId) {
-    const mentor = globalMentorsList.find(m => m.id === mentorId);
-    if (!mentor) return;
+import {
+  analyzeConcern,
+  matchExperience,
+  processMentorAnswer,
+  createImpactFeedback,
+} from "./api.js";
 
-    const exp = (mentor.experiences && mentor.experiences.length > 0) ? mentor.experiences[0] : null;
+import {
+  loadSession,
+  saveSession,
+  updateSession,
+  clearSession
+} from "./storage.js";
 
-    // A팀원 HTML 요소에 C팀원 데이터 주입
-    const mentorHeader = document.querySelector('.mentor-header h2');
-    const aiLetterContent = document.getElementById('ai-letter-content');
+import {
+  isSpeechRecognitionSupported,
+  startSpeechRecognition,
+  stopSpeechRecognition
+} from "./stt.js";
 
-    if (mentorHeader) {
-        mentorHeader.innerHTML = `${mentor.profileEmoji || '👵'} ${mentor.name} 멘토님 <span class="age">(${mentor.age}세)</span>의 경험 편지`;
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  // DOM 존재 여부에 따른 페이지 초기화
+  if (document.getElementById("pregnancy-input") || document.getElementById("step1-section")) {
+    initializePregnantPage();
+  }
 
-    if (aiLetterContent && exp) {
-        // C팀원 JSON의 편지 문단 처리
-        const letterParagraphs = exp.letter ? exp.letter.split('\n').filter(p => p.trim() !== '') : [exp.summary];
-        aiLetterContent.innerHTML = letterParagraphs.map(p => `<p>${p}</p>`).join('');
-    }
+  if (document.getElementById("record-section") || document.getElementById("mic-btn")) {
+    initializeSeniorPage();
+  }
 
-    // 화면 전환 (추천 카드 목록 숨기고 -> 편지 읽기 출력)
-    const recommendedSection = document.getElementById('recommended-card-section');
-    const letterDetailSection = document.getElementById('letter-detail-section');
-    if (recommendedSection) recommendedSection.classList.add('hidden');
-    if (letterDetailSection) letterDetailSection.classList.remove('hidden');
-};
+  if (document.getElementById("question-list-section") || document.getElementById("mypage-reaction-text")) {
+    initializeMyPage();
+  }
+});
 
-// C팀원의 JSON 파싱 데이터를 받아서 카드를 동적으로 그려주는 함수
-function displayMentors(mentors) {
-    globalMentorsList = mentors;
-    const container = document.querySelector('.experience-card-list');
-    if (!container) return; 
+/* ==========================================
+   1. 임산부 흐름 (Pregnant Flow)
+   ========================================== */
+function initializePregnantPage() {
+  const submitBtn = document.getElementById("submit-question-btn");
+  const clarificationSubmitBtn = document.getElementById("submit-clarification-btn");
 
-    container.innerHTML = ""; 
+  if (submitBtn) {
+    submitBtn.addEventListener("click", handleConcernSubmit);
+  }
 
-    if (!mentors || mentors.length === 0) {
-        container.innerHTML = "<p style='text-align:center; color:#666;'>조건에 일치하는 멘토 카드가 없습니다.</p>";
-        return;
-    }
+  if (clarificationSubmitBtn) {
+    clarificationSubmitBtn.addEventListener("click", handleClarificationSubmit);
+  }
 
-    mentors.forEach(mentor => {
-        const exp = (mentor.experiences && mentor.experiences.length > 0) ? mentor.experiences[0] : null;
-        const summaryText = exp ? exp.summary : mentor.intro;
-
-        const card = document.createElement('div');
-        card.className = 'experience-card';
-        card.style.marginBottom = "12px";
-        card.innerHTML = `
-            <div class="mentor-info">
-                <strong>${mentor.profileEmoji || '👵'} ${mentor.name} 멘토</strong> <span class="age">(${mentor.age}세, ${mentor.region || '부산'})</span>
-            </div>
-            <p class="summary">"${summaryText}"</p>
-            <button class="button secondary-btn view-letter-btn" onclick="openMentorLetter('${mentor.id}')">이 어르신의 경험 편지 읽기</button>
-        `;
-        container.appendChild(card);
-    });
+  setupFeedbackButtons();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+async function handleConcernSubmit() {
+  const pregnancyInput = document.getElementById("pregnancy-input");
+  const concernText = pregnancyInput ? pregnancyInput.value.trim() : "";
 
-    /* ==========================================
-       1. 스플래시 스크린 타이머 (1.5초)
-       ========================================== */
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        setTimeout(() => {
-            splashScreen.classList.add('fade-out');
-        }, 1500);
-    }
+  if (!concernText) {
+    alert("고민 내용을 입력해 주세요.");
+    return;
+  }
 
-    /* ==========================================
-       2. 인적사항 작성 및 메인 화면 전환
-       ========================================== */
-    const modeSelectStep = document.getElementById('mode-select-step');
-    const pregnantInfoStep = document.getElementById('pregnant-info-step');
-    const seniorInfoStep = document.getElementById('senior-info-step');
-    const mainHeroStep = document.getElementById('main-hero-step');
+  updateSession({ concernText, clarificationHistory: [] });
+  showLoading(true);
 
-    const selectPregnantBtn = document.getElementById('select-pregnant-btn');
-    const selectSeniorBtn = document.getElementById('select-senior-btn');
-
-    const startPregnantBtn = document.getElementById('start-pregnant-btn');
-    const startSeniorBtn = document.getElementById('start-senior-btn');
-    const goModePageBtn = document.getElementById('go-mode-page-btn');
-
-    let selectedTargetPage = 'pregnant.html';
-
-    function switchStep(fromStep, toStep) {
-        if (fromStep) fromStep.classList.add('hidden');
-        if (toStep) {
-            toStep.classList.remove('hidden');
-            toStep.classList.add('fade-in');
-        }
-    }
-
-    if (selectPregnantBtn) {
-        selectPregnantBtn.addEventListener('click', () => {
-            selectedTargetPage = 'pregnant.html';
-            switchStep(modeSelectStep, pregnantInfoStep);
-        });
-    }
-
-    if (selectSeniorBtn) {
-        selectSeniorBtn.addEventListener('click', () => {
-            selectedTargetPage = 'senior.html';
-            switchStep(modeSelectStep, seniorInfoStep);
-        });
-    }
-
-    const chipBtns = document.querySelectorAll('.chip-btn');
-    chipBtns.forEach(chip => {
-        chip.addEventListener('click', () => {
-            chip.classList.toggle('active');
-        });
+  try {
+    const session = loadSession();
+    const concernResult = await analyzeConcern({
+      text: session.concernText,
+      history: session.clarificationHistory,
     });
 
-    if (startPregnantBtn) {
-        startPregnantBtn.addEventListener('click', () => {
-            const nameInput = document.getElementById('preg-name');
-            const statusInput = document.getElementById('preg-status');
-            const name = nameInput ? (nameInput.value.trim() || '지혜맘') : '지혜맘';
-            const status = statusInput ? statusInput.value : '임신 초기';
+    showLoading(false);
 
-            if (typeof saveData === 'function') {
-                saveData('userName', name);
-                saveData('userStatus', status);
-            } else {
-                localStorage.setItem('userName', name);
-                localStorage.setItem('userStatus', status);
-            }
-
-            const heroTitle = document.getElementById('hero-title');
-            if (heroTitle) {
-                heroTitle.innerHTML = `<strong>${name}님</strong>, 반갑습니다!<br>어르신의 지혜를 나눠드립니다.`;
-            }
-            if (goModePageBtn) goModePageBtn.textContent = '고민 나누러 가기 🤰';
-
-            switchStep(pregnantInfoStep, mainHeroStep);
-        });
+    if (!concernResult || !concernResult.data) {
+      renderAiError("분석 결과를 불러올 수 없습니다.");
+      return;
     }
 
-    if (startSeniorBtn) {
-        startSeniorBtn.addEventListener('click', () => {
-            const nameInput = document.getElementById('senior-name');
-            const ageInput = document.getElementById('senior-age');
-            const name = nameInput ? (nameInput.value.trim() || '김정희') : '김정희';
-            const age = ageInput ? (ageInput.value.trim() || '72') : '72';
+    const { status, analysis, question } = concernResult.data;
 
-            if (typeof saveData === 'function') {
-                saveData('seniorName', name);
-                saveData('seniorAge', age);
-            } else {
-                localStorage.setItem('seniorName', name);
-                localStorage.setItem('seniorAge', age);
-            }
+    if (status === "CLARIFICATION") {
+      // 추가 질문 유도 UI
+      renderClarificationQuestion(question);
+    } else if (status === "IN_SCOPE") {
+      updateSession({ analysis });
+      renderConcernAnalysis(analysis);
 
-            const heroTitle = document.getElementById('hero-title');
-            if (heroTitle) {
-                heroTitle.innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
-            }
-            if (goModePageBtn) goModePageBtn.textContent = '지혜 들려주러 가기 👵';
+      // 매칭 수행
+      showLoading(true);
+      const matchResult = await matchExperience({ analysis });
+      showLoading(false);
 
-            switchStep(seniorInfoStep, mainHeroStep);
-        });
+      if (matchResult && matchResult.data) {
+        updateSession({ match: matchResult.data });
+        renderMatchResult(matchResult.data);
+      }
+    } else {
+      renderAiError("입력하신 내용은 서비스 제공 범위를 벗어났습니다.");
     }
+  } catch (error) {
+    showLoading(false);
+    renderAiError(error.message || "오류가 발생했습니다.");
+  }
+}
 
-    if (goModePageBtn) {
-        goModePageBtn.addEventListener('click', () => {
-            window.location.href = selectedTargetPage;
-        });
+async function handleClarificationSubmit() {
+  const clarificationInput = document.getElementById("clarification-input");
+  const answerText = clarificationInput ? clarificationInput.value.trim() : "";
+
+  if (!answerText) return;
+
+  const session = loadSession();
+  const updatedHistory = [...session.clarificationHistory, { answer: answerText }];
+  updateSession({ clarificationHistory: updatedHistory });
+
+  handleConcernSubmit(); // 다시 분석 요청
+}
+
+function renderClarificationQuestion(question) {
+  const clarificationBox = document.getElementById("clarification-section");
+  const questionLabel = document.getElementById("clarification-question-label");
+
+  if (clarificationBox && questionLabel) {
+    questionLabel.innerText = question;
+    clarificationBox.classList.remove("hidden");
+  }
+}
+
+function renderConcernAnalysis(analysis) {
+  const summaryElem = document.getElementById("analysis-summary");
+  if (summaryElem && analysis) {
+    summaryElem.innerText = analysis.summary || "";
+  }
+}
+
+function renderMatchResult(matchResult) {
+  const container = document.querySelector(".experience-card-list");
+  const recommendedSection = document.getElementById("recommended-card-section");
+
+  if (!container) return;
+  container.innerHTML = "";
+
+  const selected = matchResult.selected || matchResult;
+  if (!selected) {
+    container.innerHTML = "<p>연결된 멘토 경험이 없습니다.</p>";
+    return;
+  }
+
+  const card = document.createElement("div");
+  card.className = "experience-card";
+  card.innerHTML = `
+    <div class="mentor-info">
+      <strong>${selected.mentorName || "지혜 멘토"}</strong>
+    </div>
+    <p class="summary">"${selected.summary || selected.letterPreview || ""}"</p>
+    <button class="button secondary-btn view-letter-btn">이 어르신의 경험 편지 읽기</button>
+  `;
+
+  card.querySelector(".view-letter-btn").addEventListener("click", () => {
+    const letterDetailSection = document.getElementById("letter-detail-section");
+    const aiLetterContent = document.getElementById("ai-letter-content");
+    if (aiLetterContent) {
+      aiLetterContent.innerText = selected.letter || selected.summary;
     }
+    if (recommendedSection) recommendedSection.classList.add("hidden");
+    if (letterDetailSection) letterDetailSection.classList.remove("hidden");
+  });
 
-    /* ==========================================
-       3. pregnant.html 모드 기능 (A동작 + B로직 + C데이터 연동)
-       ========================================== */
-    const step1Section = document.getElementById('step1-section');
-    const pregnancyInput = document.getElementById('pregnancy-input');
-    const submitBtn = document.getElementById('submit-question-btn');
-    const loadingSection = document.getElementById('ai-analyzing-loading');
-    const recommendedSection = document.getElementById('recommended-card-section');
-    const viewLetterBtn = document.querySelector('.view-letter-btn');
-    const letterDetailSection = document.getElementById('letter-detail-section');
-    const resetBtn = document.getElementById('reset-btn');
-    const thankBtns = document.querySelectorAll('.thank-btn');
-    const thankCompleteMsg = document.getElementById('thank-complete-msg');
+  container.appendChild(card);
+  if (recommendedSection) recommendedSection.classList.remove("hidden");
+}
 
-    if (submitBtn) {
-        submitBtn.addEventListener('click', async () => {
-            const content = pregnancyInput ? pregnancyInput.value.trim() : '';
-            if (content === '') {
-                alert('고민 내용을 적어주세요!');
-                if (pregnancyInput) pregnancyInput.focus();
-                return;
-            }
+function renderAiError(error) {
+  alert(`[AI 안내] ${typeof error === "string" ? error : "요청 처리 중 오류가 발생했습니다."}`);
+}
 
-            // B님의 storage 기능 활용
-            if (typeof saveData === 'function') {
-                saveData('userPregnancyInput', content);
-            } else {
-                localStorage.setItem('userPregnancyInput', content);
-            }
+/* ==========================================
+   2. 어르신 흐름 (Senior Flow)
+   ========================================== */
+function initializeSeniorPage() {
+  const session = loadSession();
+  const questionDisplay = document.getElementById("mentor-question-display");
 
-            if (pregnancyInput) pregnancyInput.disabled = true;
-            submitBtn.disabled = true;
+  if (questionDisplay && session.mentorQuestion) {
+    questionDisplay.innerText = session.mentorQuestion;
+  }
 
-            if (step1Section) step1Section.classList.add('hidden');
-            if (loadingSection) loadingSection.classList.remove('hidden');
+  const micBtn = document.getElementById("mic-btn");
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      const isRecording = micBtn.classList.contains("recording");
+      if (!isRecording) {
+        handleRecordStart();
+      } else {
+        handleRecordStop();
+      }
+    });
+  }
 
-            // C팀원의 JSON 데이터를 fetch로 불러와서 매칭 연동
-            let matchedMentors = [];
-            try {
-                const response = await fetch('dummy_mentors.json');
-                const data = await response.json();
-                
-                // 임시 AI 태그 (C팀원 AI 완성 전까지 테스트용)
-                const dummyAiTags = ["첫 출산", "독박육아", "출산 불안"]; 
-                if (typeof findMatchingMentors === 'function') {
-                    matchedMentors = findMatchingMentors(data, dummyAiTags);
-                }
-            } catch (error) {
-                console.error("멘토 데이터 로드 실패:", error);
-            }
+  const sendBtn = document.getElementById("send-experience-btn");
+  if (sendBtn) {
+    sendBtn.addEventListener("click", handleMentorAnswerSubmit);
+  }
+}
 
-            setTimeout(() => {
-                if (loadingSection) loadingSection.classList.add('hidden');
-                
-                // 검색된 멘토 데이터가 있을 경우 화면에 동적 동기화
-                if (matchedMentors.length > 0) {
-                    displayMentors(matchedMentors);
-                }
-                
-                if (recommendedSection) recommendedSection.classList.remove('hidden');
-            }, 2500);
-        });
+function handleRecordStart() {
+  const micBtn = document.getElementById("mic-btn");
+  const statusLabel = document.getElementById("status-label");
+  const transcriptInput = document.getElementById("transcriptInput") || document.getElementById("stt-text-content");
+
+  if (micBtn) micBtn.classList.add("recording");
+  if (statusLabel) statusLabel.innerText = "말씀을 듣고 있습니다...";
+
+  startSpeechRecognition({
+    onStart: () => {},
+    onInterimResult: (text) => {
+      if (transcriptInput) {
+        if (transcriptInput.tagName === "TEXTAREA" || transcriptInput.tagName === "INPUT") {
+          transcriptInput.value = text;
+        } else {
+          transcriptInput.innerText = text;
+        }
+      }
+    },
+    onFinalResult: (text) => {
+      updateSession({ transcript: text });
+      if (transcriptInput) {
+        if (transcriptInput.tagName === "TEXTAREA" || transcriptInput.tagName === "INPUT") {
+          transcriptInput.value = text;
+        } else {
+          transcriptInput.innerText = text;
+        }
+      }
+    },
+    onError: (err) => {
+      if (micBtn) micBtn.classList.remove("recording");
+    },
+    onEnd: () => {
+      if (micBtn) micBtn.classList.remove("recording");
     }
+  });
+}
 
-    // A팀원 기본 하드코딩 카드 편지 연결 동작 (만약 동적 카드 외에 하드코딩 카드가 남을 경우 대비)
-    if (viewLetterBtn) {
-        viewLetterBtn.addEventListener('click', () => {
-            if (recommendedSection) recommendedSection.classList.add('hidden');
-            if (letterDetailSection) letterDetailSection.classList.remove('hidden');
-        });
-    }
+function handleRecordStop() {
+  const micBtn = document.getElementById("mic-btn");
+  if (micBtn) micBtn.classList.remove("recording");
+  stopSpeechRecognition();
+}
 
-    // [다른 고민 다시 적기] 버튼 전체 초기화 동작 (A팀원 100% 보존)
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            if (pregnancyInput) {
-                pregnancyInput.disabled = false;
-                pregnancyInput.value = '';
-            }
-            if (submitBtn) submitBtn.disabled = false;
-            
-            thankBtns.forEach(btn => btn.disabled = false);
-            if (thankCompleteMsg) thankCompleteMsg.classList.add('hidden');
+async function handleMentorAnswerSubmit() {
+  const transcriptInput = document.getElementById("transcriptInput") || document.getElementById("stt-text-content");
+  const transcript = transcriptInput ? (transcriptInput.value || transcriptInput.innerText).trim() : "";
 
-            if (letterDetailSection) letterDetailSection.classList.add('hidden');
-            if (recommendedSection) recommendedSection.classList.add('hidden');
-            if (loadingSection) loadingSection.classList.add('hidden');
-            if (step1Section) step1Section.classList.remove('hidden');
-        });
-    }
+  if (!transcript) {
+    alert("경험 내용을 입력하거나 음성으로 말씀해 주세요.");
+    return;
+  }
 
-    // [감사 버튼 클릭] 반응 동작 (A팀원 100% 보존)
-    thankBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const thankText = e.target.textContent.trim();
-            
-            if (typeof saveData === 'function') {
-                saveData('userThankReactionText', thankText);
-            } else {
-                localStorage.setItem('userThankReactionText', thankText);
-            }
+  updateSession({ transcript });
+  const session = loadSession();
 
-            thankBtns.forEach(b => b.disabled = true);
-            if (thankCompleteMsg) thankCompleteMsg.classList.remove('hidden');
-        });
+  showLoading(true);
+  try {
+    const mentorResult = await processMentorAnswer({
+      question: session.mentorQuestion || "어르신의 소중한 경험을 나누어 주세요.",
+      transcript: session.transcript,
+      selectedMatch: session.match ? session.match.selected : null,
     });
 
-    /* ==========================================
-       4. senior.html 어르신 녹음 모드 (A동작 + B STT)
-       ========================================== */
-    const micBtn = document.getElementById('mic-btn');
-    const micBtnLabel = document.getElementById('mic-btn-label');
-    const recordingStatus = document.getElementById('recording-status');
-    const statusLabel = document.getElementById('status-label');
-    const sttResultBox = document.getElementById('stt-result-box');
-    const sttTextContent = document.getElementById('stt-text-content');
-    const sendExperienceBtn = document.getElementById('send-experience-btn');
-    const questionSection = document.getElementById('question-section');
-    const recordSection = document.getElementById('record-section');
-    const thankYouSection = document.getElementById('thank-you-section');
-    const seniorResetBtn = document.getElementById('senior-reset-btn');
+    showLoading(false);
 
-    let isRecording = false;
-
-    if (micBtn) {
-        micBtn.addEventListener('click', () => {
-            if (!isRecording) {
-                isRecording = true;
-                micBtn.classList.add('recording');
-                if (micBtnLabel) micBtnLabel.textContent = '말씀 끝내기';
-                if (recordingStatus) recordingStatus.classList.remove('hidden');
-                if (statusLabel) statusLabel.textContent = '듣고 있어요... (말씀 후 눌러주세요)';
-                if (sttResultBox) sttResultBox.classList.add('hidden');
-                if (sendExperienceBtn) sendExperienceBtn.classList.add('hidden');
-
-                // B팀원의 실제 마이크 STT 음성 인식 가동
-                if (typeof startRecording === 'function') {
-                    startRecording((transcript) => {
-                        if (sttTextContent) sttTextContent.textContent = `"${transcript}"`;
-                        
-                        isRecording = false;
-                        micBtn.classList.remove('recording');
-                        if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
-                        if (recordingStatus) recordingStatus.classList.add('hidden');
-                        if (sttResultBox) sttResultBox.classList.remove('hidden');
-                        if (sendExperienceBtn) sendExperienceBtn.classList.remove('hidden');
-                    });
-                }
-            } else {
-                isRecording = false;
-                micBtn.classList.remove('recording');
-                if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
-                if (recordingStatus) recordingStatus.classList.add('hidden');
-                if (sttResultBox) sttResultBox.classList.remove('hidden');
-                if (sendExperienceBtn) sendExperienceBtn.classList.remove('hidden');
-            }
-        });
+    if (mentorResult && mentorResult.data) {
+      updateSession({ mentorResult: mentorResult.data });
+      renderMentorResult(mentorResult.data);
     }
+  } catch (error) {
+    showLoading(false);
+    alert(`[처리 오류] ${error.message}`);
+  }
+}
 
-    // [이 경험 전달하기] 버튼 클릭 동작 (A팀원 100% 보존)
-    if (sendExperienceBtn) {
-        sendExperienceBtn.addEventListener('click', () => {
-            const finalSttText = sttTextContent ? sttTextContent.textContent.trim() : '';
-            
-            if (typeof saveData === 'function') {
-                saveData('seniorRecordedVoiceText', finalSttText);
-            } else {
-                localStorage.setItem('seniorRecordedVoiceText', finalSttText);
-            }
+function renderMentorResult(result) {
+  const thankYouSection = document.getElementById("thank-you-section");
+  const recordSection = document.getElementById("record-section");
+  const letterPreview = document.getElementById("generated-letter-preview");
 
-            if (questionSection) questionSection.classList.add('hidden');
-            if (recordSection) recordSection.classList.add('hidden');
-            if (thankYouSection) thankYouSection.classList.remove('hidden');
+  if (letterPreview) {
+    letterPreview.innerText = result.letter || result.summary || "";
+  }
+
+  if (recordSection) recordSection.classList.add("hidden");
+  if (thankYouSection) thankYouSection.classList.remove("hidden");
+}
+
+/* ==========================================
+   3. 감사 반응 흐름 (Impact Feedback)
+   ========================================== */
+function setupFeedbackButtons() {
+  const thankBtns = document.querySelectorAll(".thank-btn");
+  thankBtns.forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const reaction = e.target.textContent.trim();
+      const session = loadSession();
+
+      try {
+        const feedbackResult = await createImpactFeedback({
+          reaction,
+          concernSummary: session.analysis ? session.analysis.summary : "",
+          selectedMatch: session.match ? session.match.selected : null,
         });
-    }
 
-    // [다른 이야기 또 들려주기] 리셋 버튼 동작 (A팀원 100% 보존)
-    if (seniorResetBtn) {
-        seniorResetBtn.addEventListener('click', () => {
-            if (sttResultBox) sttResultBox.classList.add('hidden');
-            if (sendExperienceBtn) sendExperienceBtn.classList.add('hidden');
-            if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
-            if (thankYouSection) thankYouSection.classList.add('hidden');
-            if (questionSection) questionSection.classList.remove('hidden');
-            if (recordSection) recordSection.classList.remove('hidden');
-        });
-    }
-    /* ==========================================
-       5. mypage.html 마이페이지 데이터 출력 연동
-       ========================================== */
-    const questionListSection = document.getElementById('question-list-section');
-    const mypageReactionText = document.getElementById('mypage-reaction-text');
-
-    if (questionListSection) {
-        // 저장된 고민 내용 불러오기
-        const savedWorry = (typeof loadData === 'function') 
-            ? loadData('userPregnancyInput') 
-            : localStorage.getItem('userPregnancyInput');
-
-        if (savedWorry) {
-            questionListSection.innerHTML = `
-                <div class="history-item">
-                    <div class="item-header">
-                        <span class="item-tag">#내고민기록</span>
-                        <span class="item-date">최근 작성</span>
-                    </div>
-                    <p class="item-content">"${savedWorry}"</p>
-                </div>
-            `;
+        if (feedbackResult && feedbackResult.data) {
+          updateSession({ feedback: feedbackResult.data });
         }
-    }
+      } catch (err) {
+        console.error("피드백 생성 오류:", err);
+      }
+    });
+  });
+}
 
-    if (mypageReactionText) {
-        // 저장된 감사 반응 불러오기 (수정사항: setItem -> getItem으로 오타 수정)
-        const savedReaction = (typeof loadData === 'function') 
-            ? loadData('userThankReactionText') 
-            : localStorage.getItem('userThankReactionText');
+/* ==========================================
+   4. 마이페이지 연동 (MyPage)
+   ========================================== */
+function initializeMyPage() {
+  const session = loadSession();
+  const questionListSection = document.getElementById("question-list-section");
+  const mypageReactionText = document.getElementById("mypage-reaction-text");
 
-        if (savedReaction) {
-            mypageReactionText.textContent = savedReaction;
-            mypageReactionText.classList.add('active');
-        }
-    }
-});
+  if (questionListSection && session.concernText) {
+    questionListSection.innerHTML = `
+      <div class="history-item">
+        <div class="item-header">
+          <span class="item-tag">#내고민기록</span>
+        </div>
+        <p class="item-content">"${session.concernText}"</p>
+      </div>
+    `;
+  }
+
+  if (mypageReactionText && session.feedback) {
+    mypageReactionText.innerText = typeof session.feedback === "string" 
+      ? session.feedback 
+      : (session.feedback.message || JSON.stringify(session.feedback));
+    mypageReactionText.classList.add("active");
+  }
+}
+
+/* 헬퍼 함수: 로딩 표시 */
+function showLoading(isLoading) {
+  const loadingElem = document.getElementById("ai-analyzing-loading");
+  if (loadingElem) {
+    if (isLoading) loadingElem.classList.remove("hidden");
+    else loadingElem.classList.add("hidden");
+  }
+}

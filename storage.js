@@ -1,19 +1,73 @@
 // storage.js
 
-// 1. 데이터를 저장하는 함수 (예: 사용자가 입력한 고민)
-function saveData(key, value) {
-    // 객체나 배열 같은 복잡한 데이터는 문자로 변환(JSON.stringify)해서 저장합니다.
-    localStorage.setItem(key, JSON.stringify(value));
+const SESSION_KEY = "eobom_session_v1";
+
+const DEFAULT_SESSION = {
+  concernText: "",
+  clarificationHistory: [],
+  analysis: null,
+  match: null,
+  mentorQuestion: "",
+  transcript: "",
+  mentorResult: null,
+  feedback: null,
+  updatedAt: ""
+};
+
+/**
+ * LocalStorage에서 현재 세션 데이터를 로드합니다.
+ */
+export function loadSession() {
+  try {
+    const data = localStorage.getItem(SESSION_KEY);
+    return data ? { ...DEFAULT_SESSION, ...JSON.parse(data) } : { ...DEFAULT_SESSION };
+  } catch (error) {
+    console.error("[Storage] 세션 로드 실패:", error);
+    return { ...DEFAULT_SESSION };
+  }
 }
 
-// 2. 데이터를 꺼내오는 함수
-function loadData(key) {
-    const data = localStorage.getItem(key);
-    // 저장된 데이터가 있으면 다시 원래 형태(JSON.parse)로 되돌려줍니다.
-    return data ? JSON.parse(data) : null;
+/**
+ * 전달받은 전체 세션 객체로 저장합니다.
+ */
+export function saveSession(session) {
+  try {
+    const updatedSession = {
+      ...session,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
+    return updatedSession;
+  } catch (error) {
+    console.error("[Storage] 세션 저장 실패:", error);
+  }
 }
 
-// 3. 데이터를 지우는 함수 (상담이 다 끝나고 초기화할 때 사용)
-function clearData(key) {
-    localStorage.removeItem(key);
+/**
+ * 기존 데이터를 유지하면서 일부 데이터만 병합(Update)합니다.
+ */
+export function updateSession(partialData) {
+  const current = loadSession();
+  const updated = {
+    ...current,
+    ...partialData,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error("[Storage] 세션 업데이트 실패:", error);
+  }
+  return updated;
+}
+
+/**
+ * 세션 데이터를 초기화합니다.
+ */
+export function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (error) {
+    console.error("[Storage] 세션 삭제 실패:", error);
+  }
 }
