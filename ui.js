@@ -1,13 +1,37 @@
-// 동적으로 생성되는 멘토 카드의 [이 어르신의 경험 편지 읽기] 버튼을 누르면 편지 화면으로 전환하는 함수
-window.showLetterSection = function() {
+// C팀원 멘토 데이터 전역 관리용
+let globalMentorsList = [];
+
+// [이 어르신의 경험 편지 읽기] 클릭 시 C팀원의 편지(letter) 세부 내용을 화면에 출력하는 함수
+window.openMentorLetter = function(mentorId) {
+    const mentor = globalMentorsList.find(m => m.id === mentorId);
+    if (!mentor) return;
+
+    const exp = (mentor.experiences && mentor.experiences.length > 0) ? mentor.experiences[0] : null;
+
+    // A팀원 HTML 요소에 C팀원 데이터 주입
+    const mentorHeader = document.querySelector('.mentor-header h2');
+    const aiLetterContent = document.getElementById('ai-letter-content');
+
+    if (mentorHeader) {
+        mentorHeader.innerHTML = `${mentor.profileEmoji || '👵'} ${mentor.name} 멘토님 <span class="age">(${mentor.age}세)</span>의 경험 편지`;
+    }
+
+    if (aiLetterContent && exp) {
+        // C팀원 JSON의 편지 문단 처리
+        const letterParagraphs = exp.letter ? exp.letter.split('\n').filter(p => p.trim() !== '') : [exp.summary];
+        aiLetterContent.innerHTML = letterParagraphs.map(p => `<p>${p}</p>`).join('');
+    }
+
+    // 화면 전환 (추천 카드 목록 숨기고 -> 편지 읽기 출력)
     const recommendedSection = document.getElementById('recommended-card-section');
     const letterDetailSection = document.getElementById('letter-detail-section');
     if (recommendedSection) recommendedSection.classList.add('hidden');
     if (letterDetailSection) letterDetailSection.classList.remove('hidden');
 };
 
-// B팀원의 멘토 데이터 동적 화면 출력 함수
+// C팀원의 JSON 파싱 데이터를 받아서 카드를 동적으로 그려주는 함수
 function displayMentors(mentors) {
+    globalMentorsList = mentors;
     const container = document.querySelector('.experience-card-list');
     if (!container) return; 
 
@@ -19,14 +43,18 @@ function displayMentors(mentors) {
     }
 
     mentors.forEach(mentor => {
+        const exp = (mentor.experiences && mentor.experiences.length > 0) ? mentor.experiences[0] : null;
+        const summaryText = exp ? exp.summary : mentor.intro;
+
         const card = document.createElement('div');
         card.className = 'experience-card';
+        card.style.marginBottom = "12px";
         card.innerHTML = `
             <div class="mentor-info">
-                <strong>${mentor.name} 멘토</strong> <span class="age">(${mentor.age}세)</span>
+                <strong>${mentor.profileEmoji || '👵'} ${mentor.name} 멘토</strong> <span class="age">(${mentor.age}세, ${mentor.region || '부산'})</span>
             </div>
-            <p class="summary">"${mentor.previewText || mentor.summary || '소중한 삶의 경험이 준비되어 있습니다.'}"</p>
-            <button class="button secondary-btn view-letter-btn" onclick="showLetterSection()">이 어르신의 경험 편지 읽기</button>
+            <p class="summary">"${summaryText}"</p>
+            <button class="button secondary-btn view-letter-btn" onclick="openMentorLetter('${mentor.id}')">이 어르신의 경험 편지 읽기</button>
         `;
         container.appendChild(card);
     });
@@ -147,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ==========================================
-       3. pregnant.html 모드 기능 (A동작 + B로직)
+       3. pregnant.html 모드 기능 (A동작 + B로직 + C데이터 연동)
        ========================================== */
     const step1Section = document.getElementById('step1-section');
     const pregnancyInput = document.getElementById('pregnancy-input');
@@ -182,12 +210,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step1Section) step1Section.classList.add('hidden');
             if (loadingSection) loadingSection.classList.remove('hidden');
 
-            // B님의 멘토 데이터 필터링 연동
+            // C팀원의 JSON 데이터를 fetch로 불러와서 매칭 연동
             let matchedMentors = [];
-            if (typeof getMentors === 'function' && typeof findMatchingMentors === 'function') {
-                const dummyAiTags = ["첫 출산", "독박육아"]; 
-                const allMentors = await getMentors();
-                matchedMentors = findMatchingMentors(allMentors, dummyAiTags);
+            try {
+                const response = await fetch('dummy_mentors.json');
+                const data = await response.json();
+                
+                // 임시 AI 태그 (C팀원 AI 완성 전까지 테스트용)
+                const dummyAiTags = ["첫 출산", "독박육아", "출산 불안"]; 
+                if (typeof findMatchingMentors === 'function') {
+                    matchedMentors = findMatchingMentors(data, dummyAiTags);
+                }
+            } catch (error) {
+                console.error("멘토 데이터 로드 실패:", error);
             }
 
             setTimeout(() => {
@@ -203,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // A팀원 기본 하드코딩 카드 편지 연결 동작
+    // A팀원 기본 하드코딩 카드 편지 연결 동작 (만약 동적 카드 외에 하드코딩 카드가 남을 경우 대비)
     if (viewLetterBtn) {
         viewLetterBtn.addEventListener('click', () => {
             if (recommendedSection) recommendedSection.classList.add('hidden');
@@ -325,5 +360,41 @@ document.addEventListener('DOMContentLoaded', () => {
             if (questionSection) questionSection.classList.remove('hidden');
             if (recordSection) recordSection.classList.remove('hidden');
         });
+    }
+    /* ==========================================
+       5. mypage.html 마이페이지 데이터 출력 연동
+       ========================================== */
+    const questionListSection = document.getElementById('question-list-section');
+    const mypageReactionText = document.getElementById('mypage-reaction-text');
+
+    if (questionListSection) {
+        // 저장된 고민 내용 불러오기
+        const savedWorry = (typeof loadData === 'function') 
+            ? loadData('userPregnancyInput') 
+            : localStorage.getItem('userPregnancyInput');
+
+        if (savedWorry) {
+            questionListSection.innerHTML = `
+                <div class="history-item">
+                    <div class="item-header">
+                        <span class="item-tag">#내고민기록</span>
+                        <span class="item-date">최근 작성</span>
+                    </div>
+                    <p class="item-content">"${savedWorry}"</p>
+                </div>
+            `;
+        }
+    }
+
+    if (mypageReactionText) {
+        // 저장된 감사 반응 불러오기 (수정사항: setItem -> getItem으로 오타 수정)
+        const savedReaction = (typeof loadData === 'function') 
+            ? loadData('userThankReactionText') 
+            : localStorage.getItem('userThankReactionText');
+
+        if (savedReaction) {
+            mypageReactionText.textContent = savedReaction;
+            mypageReactionText.classList.add('active');
+        }
     }
 });
