@@ -30,6 +30,13 @@ import {
   createErrorResponse,
 } from "./agents.js";
 
+import {
+  loadMentorArchive,
+  prepareExperienceArchiveForAi,
+  validateAiMatchResult,
+  createFallbackMatchResult,
+} from "./matching.js";
+
 /*
  * AI 실행 모드
  */
@@ -56,6 +63,30 @@ export const API_ACTIONS = Object.freeze({
   PROCESS_MENTOR_ANSWER: "process-mentor-answer",
   CREATE_IMPACT_FEEDBACK: "create-impact-feedback",
 });
+
+/*
+ * 멘토 데이터는 매칭할 때마다 다시 요청하지 않고
+ * 한 번 불러온 결과를 재사용한다.
+ */
+let mentorArchivePromise = null;
+
+/*
+ * dummy_mentors.json을 불러온다.
+ *
+ * 첫 요청이 성공하면 같은 데이터를 계속 재사용한다.
+ * 실패하면 저장값을 초기화해서 다음 요청에서 다시 시도한다.
+ */
+async function getMentorArchive() {
+  if (!mentorArchivePromise) {
+    mentorArchivePromise =
+      loadMentorArchive().catch((error) => {
+        mentorArchivePromise = null;
+        throw error;
+      });
+  }
+
+  return mentorArchivePromise;
+}
 
 /*
  * Mock 결과가 바로 나타나면
@@ -1356,8 +1387,7 @@ export async function analyzeConcern(
 export async function matchExperience(
   payload
 ) {
-  const analysis =
-    payload?.analysis;
+  const analysis = payload?.analysis;
 
   if (
     !analysis ||
@@ -1369,62 +1399,177 @@ export async function matchExperience(
     );
   }
 
+  /*
+   * 실제 경험 데이터가 없으면
+   * AI도 올바른 경험을 선택할 수 없다.
+   */
+  let archive;
+
+  try {
+    archive =
+      await getMentorArchive();
+  } catch (error) {
+    return createErrorResponse(
+      "ARCHIVE_LOAD_FAILED",
+      error instanceof Error
+        ? error.message
+        : "멘토 경험 데이터를 불러오지 못했습니다."
+    );
+  }
+
+  /*
+   * 실제 Solar 모드
+   */
   if (AI_MODE === AI_MODES.SOLAR) {
     try {
+      /*
+       * 12개 경험 카드에서 AI 평가에 필요한
+       * 정보만 정리한다.
+       */
+      const experiences =
+        prepareExperienceArchiveForAi(
+          archive
+        );
+
+      if (experiences.length === 0) {
+        throw new Error(
+          "AI가 평가할 경험 카드가 없습니다."
+        );
+      }
+
+      /*
+       * 고민 분석 결과와 12개 경험을
+       * Solar에 함께 전달한다.
+       */
       const solarResult =
         await callSolarAction(
           API_ACTIONS.MATCH_EXPERIENCE,
           {
             analysis,
+            experiences,
           }
         );
 
+      /*
+       * 먼저 AI 응답 형식을 정리한다.
+       */
       const normalizedResult =
         normalizeAiMatchResult(
           solarResult
         );
 
-      if (!normalizedResult.selected) {
+      /*
+       * AI가 반환한 ID가 실제 데이터에 있는지
+       * 다시 검사한다.
+       */
+      const validatedResult =
+        validateAiMatchResult(
+          normalizedResult,
+          archive
+        );
+
+      if (!validatedResult.selected) {
         throw new Error(
-          "유효한 경험 추천 결과가 없습니다."
+          "AI가 유효한 경험을 선택하지 못했습니다."
         );
       }
 
       return createSuccessResponse(
-        normalizedResult,
+        validatedResult,
         SOURCE_TYPES.SOLAR,
         false
       );
     } catch (error) {
+      /*
+       * Solar가 실패하면 matching.js의
+       * 규칙 기반 비상 추천을 사용한다.
+       */
       const fallbackResult =
-        createMockMatchResult(
-          analysis
+        createFallbackMatchResult(
+          analysis,
+          archive
         );
 
+      const validatedFallback =
+        validateAiMatchResult(
+          fallbackResult,
+          archive
+        );
+
+      if (!validatedFallback.selected) {
+        return createErrorResponse(
+          "NO_MATCH",
+          "현재 고민과 연결할 수 있는 경험을 찾지 못했습니다."
+        );
+      }
+
       return createSuccessResponse(
-        normalizeAiMatchResult(
-          fallbackResult
-        ),
+        validatedFallback,
         SOURCE_TYPES.FALLBACK,
         true
       );
     }
   }
 
+  /*
+   * 현재 사용하는 Mock 모드
+   */
   await wait(
     MOCK_DELAYS.MATCH_EXPERIENCE
   );
 
+  /*
+   * Mock 결과도 실제 데이터와 대조한다.
+   * Mock이라고 해서 존재하지 않는 ID를 허용하지 않는다.
+   */
   const mockResult =
-    createMockMatchResult(analysis);
+    normalizeAiMatchResult(
+      createMockMatchResult(analysis)
+    );
+
+  const validatedMock =
+    validateAiMatchResult(
+      mockResult,
+      archive
+    );
+
+  if (validatedMock.selected) {
+    return createSuccessResponse(
+      validatedMock,
+      SOURCE_TYPES.MOCK,
+      false
+    );
+  }
+
+  /*
+   * Mock 데이터의 ID가 잘못된 경우에도
+   * 규칙 기반 추천을 한 번 더 시도한다.
+   */
+  const ruleResult =
+    createFallbackMatchResult(
+      analysis,
+      archive
+    );
+
+  const validatedRuleResult =
+    validateAiMatchResult(
+      ruleResult,
+      archive
+    );
+
+  if (!validatedRuleResult.selected) {
+    return createErrorResponse(
+      "NO_MATCH",
+      "현재 고민과 연결할 수 있는 경험을 찾지 못했습니다."
+    );
+  }
 
   return createSuccessResponse(
-    normalizeAiMatchResult(mockResult),
-    SOURCE_TYPES.MOCK,
-    false
+    validatedRuleResult,
+    SOURCE_TYPES.RULE,
+    true
   );
 }
-
 /*
  * ==================================================
  * 공개 함수 3: 어르신 답변 처리
