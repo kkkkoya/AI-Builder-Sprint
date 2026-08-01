@@ -11,16 +11,23 @@
 
     <!-- 📱 1. 앱 스플래시 스크린 -->
     <div id="splash-screen">
-        <div class="splash-content">
+        <!-- <div class="splash-content">
             <div class="splash-logo">🌸</div>
             <h1 class="splash-title">이어봄</h1>
             <p class="splash-sub">세대와 세대를 이어보다</p>
+        </div> -->
+        <div class="splash-logo-container-transition">
+            <!-- 화면 전환 시 그림: 크기 확대를 위해 클래스 변경 -->
+            <img class="brand-logo-transition" src="eobom.png">
         </div>
-    </div>
+    </div> 
 
     <!-- 📱 상단 헤더 (양 옆 고정) -->
     <header class="global-top-header">
-        <div class="brand-logo">🌸 이어봄</div>
+        <div>
+            <!-- 기본 화면 로고: 크기 조정을 위해 클래스 변경 -->
+            <img class="brand-logo-content" src="eobom(nowriting).png">
+        </div>
         <button id="main-profile-btn" class="profile-top-btn hidden">👤 프로필</button>
     </header>
 
@@ -32,11 +39,11 @@
 
             <div class="button-group hero-btn-group">
                 <button class="button primary-btn app-mode-btn" id="select-pregnant-btn">
-                    <span class="mode-emoji">🤰</span>
+                    <span class="mode-emoji-content">🤰</span>
                     <span>임산부입니다</span>
                 </button>
                 <button class="button secondary-btn app-mode-btn" id="select-senior-btn">
-                    <span class="mode-emoji">👵</span>
+                    <span class="mode-emoji-content">👵</span>
                     <span>어르신입니다</span>
                 </button>
             </div>
@@ -44,7 +51,8 @@
 
         <!-- 📱 3-A. 임산부 인적사항 입력 단계 -->
         <section id="pregnant-info-step" class="card-box app-main-card hidden">
-            <span class="profile-avatar-large">🤰</span>
+            <!-- 기본 화면 아바타: 크기 조정을 위해 클래스 변경 -->
+            <span class="avatar-large-content">🤰</span>
             <h2>임산부 정보 입력</h2>
             <p class="index-subtext">원활한 소통을 위해 간단한 정보를 알려주세요.</p>
 
@@ -66,7 +74,8 @@
 
         <!-- 📱 3-B. 어르신 인적사항 입력 단계 -->
         <section id="senior-info-step" class="card-box app-main-card hidden">
-            <span class="profile-avatar-large">👵</span>
+            <!-- 기본 화면 아바타: 크기 조정을 위해 클래스 변경 -->
+            <span class="avatar-large-content">👵</span>
             <h2>어르신 정보 입력</h2>
             <p class="index-subtext">따뜻한 지혜를 들려주실 어르신의 정보입니다.</p>
 
@@ -108,8 +117,9 @@
             <a id="pregnantStartButton" href="pregnant.html" class="button primary-btn mt-10 hidden">고민 나누러 가기 🤰</a>
             <a id="seniorStartButton" href="senior.html" class="button secondary-btn mt-10 hidden">지혜 들려주러 가기 👵</a>
 
-            <div class="baby-illustration-box">
-                <span class="baby-emoji">👶🏻</span>
+            <!-- 기본 화면 일러스트: 크기 조정을 위해 클래스 변경 -->
+            <div class="illustration-box-content">
+                <span class="illustration-emoji-content">👶🏻</span>
             </div>
         </section>
     </main>

@@ -3,11 +3,22 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이어봄 - 어르신 모드</title>
+    <title>어르신 모드</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
 </head>
 <body class="fade-in">
+
+    <header class="global-top-header">
+        <!-- 👈 왼쪽: 뒤로가기 버튼 -->
+        <button class="button header-close-btn" onclick="window.location.href='index.html'">< 뒤로가기</button>
+        
+        <!-- 👉 오른쪽: 로고 (및 프로필 버튼) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img class="brand-logo-content" src="eobom(nowriting).png">
+            <button id="main-profile-btn" class="profile-top-btn hidden">👤 프로필</button>
+        </div>
+    </header>
 
     <main class="container">
         <!-- 1단계: 도착한 질문 카드 -->
@@ -29,7 +40,8 @@
 
                 <!-- 원본 원형 마이크 버튼에 B용 ID 연결 -->
                 <button id="mic-btn" class="senior-mic-btn" aria-label="음성 녹음 시작">
-                    <span class="mic-icon">🎙️</span>
+                    <!-- 기본 화면 아이콘: 크기 조정을 위해 클래스 변경 -->
+                    <span class="icon-mic-content">🎙️</span>
                     <span id="mic-btn-label">말씀 시작하기</span>
                 </button>
                 <button id="recordButton" style="display:none;"></button>
