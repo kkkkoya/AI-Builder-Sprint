@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.addEventListener('click', () => {
             const content = pregnancyInput.value.trim();
             if (content === '') {
-                alert('고민 내용을 적어주세요!');
+                showCustomAlert();
                 pregnancyInput.focus();
                 return;
             }
@@ -309,4 +309,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (seniorHomeCompleteBtn) {
         seniorHomeCompleteBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
+});
+
+// --- 이 부분을 JS 파일 아무 곳에나 추가해 주세요 ---
+
+// 1. 알림창 띄우기 함수
+function showCustomAlert() {
+    document.getElementById('customAlertModal').style.display = 'flex';
+}
+
+// 2. 확인(닫기) 버튼 클릭 시 알림창 숨기기
+document.getElementById('closeModalBtn').addEventListener('click', function() {
+    document.getElementById('customAlertModal').style.display = 'none';
 });
