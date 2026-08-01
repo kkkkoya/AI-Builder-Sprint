@@ -382,3 +382,4 @@ export function areRelatedTags(firstTag, secondTag) {
    */
   return firstCategory === secondCategory;
 }
+
