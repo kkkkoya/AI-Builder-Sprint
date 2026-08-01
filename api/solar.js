@@ -25,7 +25,7 @@ const SOLAR_MODEL = "solar-pro3";
  * Solar Pro 3가 긴 프롬프트를 처리할 시간을
  * 충분히 확보하기 위해 2분으로 설정한다.
  */
-const REQUEST_TIMEOUT_MS = 120000;
+const REQUEST_TIMEOUT_MS = 30000;
 
 /*
  * 현재 고민 분석 결과에 사용할 수 있는
@@ -1090,19 +1090,6 @@ function buildProcessMentorAnswerMessages(
     }
 
     /*
-     * 사용자의 고민 분석 결과는 선택 사항이다.
-     *
-     * 객체로 전달된 경우에만 사용하고,
-     * 올바른 객체가 아니면 null로 처리한다.
-     */
-    const concernAnalysis =
-        payload?.concernAnalysis &&
-            typeof payload.concernAnalysis ===
-            "object"
-            ? payload.concernAnalysis
-            : null;
-
-    /*
      * 경험 카드에서 사용할 수 있는
      * 표준 태그 목록을 문자열로 만든다.
      */
@@ -1404,7 +1391,6 @@ safe, caution, urgent 중 하나만 사용하라.
         question,
         transcript,
         selectedMatch,
-        concernAnalysis,
     };
 
     /*

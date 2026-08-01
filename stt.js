@@ -1,34 +1,49 @@
 // stt.js
 
 let recognition = null;
+let mediaRecorder = null;
+let audioChunks = [];
 
 /**
  * Web Speech API 지원 여부 확인
  */
-export function isSpeechRecognitionSupported() {
-  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+export function isRecordingSupported() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && (window.SpeechRecognition || window.webkitSpeechRecognition) && window.MediaRecorder);
 }
 
 /**
- * 음성 인식 시작
+ * 음성 녹음 및 텍스트 변환 시작
  */
-export function startSpeechRecognition({
+export async function startRecordingAndTranscription({
   onStart,
   onInterimResult,
   onFinalResult,
   onError,
-  onEnd,
 }) {
-  const transcriptInput = document.getElementById("transcriptInput") || document.getElementById("stt-text-content");
-  const errorMsgContainer = document.getElementById("stt-error-msg") || document.getElementById("status-label");
-
-  // 미지원 브라우저 처리
-  if (!isSpeechRecognitionSupported()) {
-    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
-    if (onError) onError(new Error("Speech recognition not supported"));
+  if (!isRecordingSupported()) {
+    const err = new Error("Recording APIs not supported");
+    if (onError) onError(err);
     return null;
   }
 
+  // 1. Get audio stream
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    console.error("[Recorder] Error getting media stream:", err);
+    if (onError) onError(err);
+    return;
+  }
+
+  // 2. Setup MediaRecorder
+  audioChunks = [];
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = event => {
+    audioChunks.push(event.data);
+  };
+  
+  // 3. Setup SpeechRecognition
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.continuous = true;
@@ -57,51 +72,45 @@ export function startSpeechRecognition({
 
   recognition.onerror = (event) => {
     console.error("[STT Error]:", event.error);
-    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
     if (onError) onError(event);
   };
 
-  recognition.onend = () => {
-    if (onEnd) onEnd(finalTranscript);
+  // 4. Start both
+  mediaRecorder.start();
+  recognition.start();
+
+  // Return a function to stop the recording
+  return function stopRecordingAndTranscription() {
+    return new Promise((resolve, reject) => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => {
+            const base64data = reader.result;
+            // Clean up stream
+            stream.getTracks().forEach(track => track.stop());
+            mediaRecorder = null;
+            resolve({
+              transcript: finalTranscript,
+              audioDataUrl: base64data
+            });
+          };
+          reader.onerror = (err) => {
+             stream.getTracks().forEach(track => track.stop());
+             reject(err);
+          };
+        };
+        recognition.stop();
+        mediaRecorder.stop();
+        recognition = null;
+      } else {
+        resolve({
+          transcript: finalTranscript,
+          audioDataUrl: null
+        });
+      }
+    });
   };
-
-  try {
-    recognition.start();
-  } catch (err) {
-    showFallbackUI("음성 인식을 사용할 수 없습니다.\n아래 칸에 경험을 직접 입력해 주세요.", transcriptInput, errorMsgContainer);
-    if (onError) onError(err);
-  }
-
-  return recognition;
-}
-
-/**
- * 음성 인식 종료
- */
-export function stopSpeechRecognition() {
-  if (recognition) {
-    recognition.stop();
-    recognition = null;
-  }
-}
-
-/**
- * 실패 및 미지원 시 대체 입력 활성화 UI 헬퍼
- */
-function showFallbackUI(message, transcriptInput, errorContainer) {
-  if (errorContainer) {
-    errorContainer.innerText = message;
-    errorContainer.classList.remove("hidden");
-  } else {
-    alert(message);
-  }
-
-  if (transcriptInput) {
-    transcriptInput.disabled = false;
-    transcriptInput.readOnly = false;
-    transcriptInput.focus();
-    if (transcriptInput.tagName === "TEXTAREA" || transcriptInput.tagName === "INPUT") {
-      transcriptInput.placeholder = "이곳에 경험을 직접 입력해 주세요...";
-    }
-  }
 }

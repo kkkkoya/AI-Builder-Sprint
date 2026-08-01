@@ -15,8 +15,7 @@ import {
 } from "./storage.js";
 
 import {
-  startSpeechRecognition,
-  stopSpeechRecognition,
+  startRecordingAndTranscription,
 } from "./stt.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -149,14 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileUserName = document.getElementById('profile-user-name');
     const profileUserDetail = document.getElementById('profile-user-detail');
     const profileUserAvatar = document.getElementById('profile-user-avatar');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const answeredSummary = document.getElementById('answeredSummary');
+    const answeredTags = document.getElementById('answeredTags');
 
     const pregnantHistoryView = document.getElementById('pregnant-history-view');
     const seniorHistoryView = document.getElementById('senior-history-view');
     const mypageBackBtn = document.getElementById('mypage-back-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
-    if (profileUserName) {
+    if (profileUserName) { // mypage.html에서만 실행
         const userRole = localStorage.getItem('userRole') || 'pregnant';
+        const session = loadSession();
 
         if (userRole === 'pregnant') {
             const name = localStorage.getItem('userName') || '지혜맘';
@@ -185,6 +188,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (seniorHistoryView) seniorHistoryView.classList.remove('hidden');
             if (pregnantHistoryView) pregnantHistoryView.classList.add('hidden');
+
+            // 오디오 및 AI 결과 표시
+            if (session.audioUrl && audioPlayer) {
+                audioPlayer.src = session.audioUrl;
+            }
+            if (session.mentorResult?.experienceCard) {
+                const card = session.mentorResult.experienceCard;
+                if (answeredSummary) {
+                    answeredSummary.textContent = card.summary || "요약 정보가 없습니다.";
+                }
+                if (answeredTags) {
+                    answeredTags.innerHTML = ''; // Clear existing
+                    if (card.standardTags && card.standardTags.length > 0) {
+                        card.standardTags.forEach(tag => {
+                            const tagEl = document.createElement('div');
+                            tagEl.className = 'chip-btn active';
+                            tagEl.textContent = `#${tag}`;
+                            answeredTags.appendChild(tagEl);
+                        });
+                    } else {
+                        answeredTags.textContent = "생성된 태그가 없습니다.";
+                    }
+                }
+            }
         }
     }
 
@@ -215,6 +242,90 @@ document.addEventListener('DOMContentLoaded', () => {
     const thankCompleteMsg = document.getElementById('thank-complete-msg');
     const pregnantHomeCompleteBtn = document.getElementById('pregnant-home-complete-btn');
 
+    const clarificationSection = document.getElementById('clarificationSection');
+    const clarificationQuestionElem = document.getElementById('clarificationQuestion');
+    const clarificationInput = document.getElementById('clarificationInput');
+    const clarificationSubmitBtn = document.getElementById('clarificationSubmitButton');
+
+    async function handleConcernAnalysis(content, history) {
+        if (step1Section) step1Section.classList.add('hidden');
+        if (clarificationSection) clarificationSection.classList.add('hidden');
+        if (loadingSection) loadingSection.classList.remove('hidden');
+
+        try {
+            updateSession({ concernText: content, clarificationHistory: history });
+            
+            const concernResult = await analyzeConcern({ text: content, history: history });
+
+            if (concernResult && concernResult.ok) {
+                const { route, analysis, clarifyingQuestion, response } = concernResult.data;
+
+                if (route === 'CLARIFICATION') {
+                    if (loadingSection) loadingSection.classList.add('hidden');
+                    if (clarificationQuestionElem) clarificationQuestionElem.innerText = clarifyingQuestion || '구체적인 고민 내용을 조금 더 들려주시겠어요?';
+                    if (clarificationInput) clarificationInput.value = '';
+                    if (clarificationSection) clarificationSection.classList.remove('hidden');
+                    return;
+                }
+
+                if (route === 'IN_SCOPE') {
+                    updateSession({ analysis });
+                    
+                    const matchResult = await matchExperience({ analysis });
+                    if (loadingSection) loadingSection.classList.add('hidden');
+
+                    if (matchResult && matchResult.ok) {
+                        if (!matchResult.data.selected) {
+                            alert("죄송합니다, 현재 고민과 연결할 수 있는 적절한 경험을 찾지 못했습니다. 고민 내용을 조금 더 자세하게 작성해 주시면 더 좋은 경험을 찾을 수 있습니다.");
+                            if (loadingSection) loadingSection.classList.add('hidden');
+                            if (step1Section) step1Section.classList.remove('hidden');
+                            if (pregnancyInput) pregnancyInput.disabled = false;
+                            if(submitBtn) submitBtn.disabled = false;
+                            return;
+                        }
+
+                        updateSession({ match: matchResult.data, mentorQuestion: matchResult.data.mentorQuestion });
+                        const selected = matchResult.data.selected;
+
+                        const receivedLetterText = document.getElementById('receivedLetterText');
+                        if (receivedLetterText && selected) {
+                            const mentorQuestion = matchResult.data.mentorQuestion;
+                        }
+
+                        // TODO: recommendedSection 내부의 다른 요소들(경험 제목, 멘토 이름 등)을 selected 객체의 데이터로 채워야 합니다.
+
+                        if (recommendedSection) recommendedSection.classList.remove('hidden');
+                    } else {
+                        alert('경험 추천을 불러오지 못했습니다.');
+                        if (loadingSection) loadingSection.classList.add('hidden');
+                        if (step1Section) step1Section.classList.remove('hidden');
+                        if (pregnancyInput) pregnancyInput.disabled = false;
+                        if(submitBtn) submitBtn.disabled = false;
+                    }
+                } else {
+                    if (loadingSection) loadingSection.classList.add('hidden');
+                    alert(response || '입력하신 내용은 서비스 제공 범위를 벗어났습니다.');
+                    if (step1Section) step1Section.classList.remove('hidden');
+                    if (pregnancyInput) pregnancyInput.disabled = false;
+                    if(submitBtn) submitBtn.disabled = false;
+                }
+            } else {
+                if (loadingSection) loadingSection.classList.add('hidden');
+                alert(concernResult?.error?.message || '고민 분석 중 오류가 발생했습니다.');
+                if (step1Section) step1Section.classList.remove('hidden');
+                if (pregnancyInput) pregnancyInput.disabled = false;
+                if(submitBtn) submitBtn.disabled = false;
+            }
+        } catch (err) {
+            console.error("고민 처리 오류:", err);
+            if (loadingSection) loadingSection.classList.add('hidden');
+            if (step1Section) step1Section.classList.remove('hidden');
+            if (pregnancyInput) pregnancyInput.disabled = false;
+            if(submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+
     if (submitBtn) {
         submitBtn.addEventListener('click', async () => {
             const content = pregnancyInput ? pregnancyInput.value.trim() : '';
@@ -228,73 +339,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pregnancyInput) pregnancyInput.disabled = true;
             submitBtn.disabled = true;
 
-            if (step1Section) step1Section.classList.add('hidden');
-            if (loadingSection) loadingSection.classList.remove('hidden');
+            await handleConcernAnalysis(content, []);
+        });
+    }
 
-            try {
-                updateSession({ concernText: content, clarificationHistory: [] });
-                
-                // C팀원 1차 고민 분석 AI
-                const concernResult = await analyzeConcern({ text: content, history: [] });
-
-                if (concernResult && concernResult.ok) {
-                    const { route, analysis, clarifyingQuestion, response } = concernResult.data;
-
-                    if (route === 'CLARIFICATION') {
-                        if (loadingSection) loadingSection.classList.add('hidden');
-                        const clarificationSection = document.getElementById('clarificationSection');
-                        const qElem = document.getElementById('clarificationQuestion');
-                        if (qElem) qElem.innerText = clarifyingQuestion || '구체적인 고민 내용을 조금 더 들려주시겠어요?';
-                        if (clarificationSection) clarificationSection.classList.remove('hidden');
-                        return;
-                    }
-
-                    if (route === 'IN_SCOPE') {
-                        updateSession({ analysis });
-                        
-                        // C팀원 2차 경험 매칭 AI
-                        const matchResult = await matchExperience({ analysis });
-                        if (loadingSection) loadingSection.classList.add('hidden');
-
-                        if (matchResult && matchResult.ok) {
-                            updateSession({ match: matchResult.data });
-                            const selected = matchResult.data.selected;
-
-                            // A팀원 UI에 C팀원의 AI 결과 바인딩
-                            const receivedLetterText = document.getElementById('receivedLetterText');
-                            if (receivedLetterText && selected) {
-                                receivedLetterText.innerText = selected.letter || selected.reason || '어르신의 지혜 편지입니다.';
-                            }
-
-                            if (recommendedSection) recommendedSection.classList.remove('hidden');
-                        } else {
-                            alert('경험 추천을 불러오지 못했습니다.');
-                            if (loadingSection) loadingSection.classList.add('hidden');
-                            if (step1Section) step1Section.classList.remove('hidden');
-                            if (pregnancyInput) pregnancyInput.disabled = false;
-                            submitBtn.disabled = false;
-                        }
-                    } else {
-                        if (loadingSection) loadingSection.classList.add('hidden');
-                        alert(response || '입력하신 내용은 서비스 제공 범위를 벗어났습니다.');
-                        if (step1Section) step1Section.classList.remove('hidden');
-                        if (pregnancyInput) pregnancyInput.disabled = false;
-                        submitBtn.disabled = false;
-                    }
-                } else {
-                    if (loadingSection) loadingSection.classList.add('hidden');
-                    alert(concernResult?.error?.message || '고민 분석 중 오류가 발생했습니다.');
-                    if (step1Section) step1Section.classList.remove('hidden');
-                    if (pregnancyInput) pregnancyInput.disabled = false;
-                    submitBtn.disabled = false;
-                }
-            } catch (err) {
-                console.error("고민 처리 오류:", err);
-                if (loadingSection) loadingSection.classList.add('hidden');
-                if (step1Section) step1Section.classList.remove('hidden');
-                if (pregnancyInput) pregnancyInput.disabled = false;
-                submitBtn.disabled = false;
+    if (clarificationSubmitBtn) {
+        clarificationSubmitBtn.addEventListener('click', async () => {
+            const answer = clarificationInput ? clarificationInput.value.trim() : '';
+            if (answer === '') {
+                alert('답변을 입력해주세요.');
+                if(clarificationInput) clarificationInput.focus();
+                return;
             }
+
+            const session = loadSession();
+            const question = clarificationQuestionElem ? clarificationQuestionElem.innerText : '';
+            
+            const newHistory = [
+                ...session.clarificationHistory,
+                { question, answer }
+            ];
+
+            await handleConcernAnalysis(session.concernText, newHistory);
         });
     }
 
@@ -369,9 +435,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let isRecording = false;
+    let stopRecording = null;
 
     if (micBtn) {
-        micBtn.addEventListener('click', () => {
+        micBtn.addEventListener('click', async () => {
             const transcriptInput = document.getElementById('transcriptInput');
             if (!isRecording) {
                 isRecording = true;
@@ -380,32 +447,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (recordingStatus) recordingStatus.classList.remove('hidden');
                 if (sttResultBox) sttResultBox.classList.add('hidden');
                 if (sendExperienceBtn) sendExperienceBtn.classList.add('hidden');
-
-                startSpeechRecognition({
-                    onInterimResult: (text) => {
-                        if (transcriptInput) transcriptInput.value = text;
-                    },
-                    onFinalResult: (text) => {
-                        if (transcriptInput) transcriptInput.value = text;
-                        updateSession({ transcript: text });
-                    },
-                    onError: () => {
-                        isRecording = false;
-                        micBtn.classList.remove('recording');
-                        if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
-                    },
-                    onEnd: () => {
-                        isRecording = false;
-                        micBtn.classList.remove('recording');
-                        if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
-                        if (recordingStatus) recordingStatus.classList.add('hidden');
-                        if (sttResultBox) sttResultBox.classList.remove('hidden');
-                        if (sendExperienceBtn) sendExperienceBtn.classList.remove('hidden');
-                    }
-                });
+                
+                try {
+                    stopRecording = await startRecordingAndTranscription({
+                        onInterimResult: (text) => {
+                            if (transcriptInput) transcriptInput.value = text;
+                        },
+                        onFinalResult: (text) => {
+                            if (transcriptInput) transcriptInput.value = text;
+                        },
+                        onError: (err) => {
+                            alert(`녹음 중 오류가 발생했습니다: ${err.message}`);
+                            isRecording = false;
+                            micBtn.classList.remove('recording');
+                            if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
+                            if (recordingStatus) recordingStatus.classList.add('hidden');
+                        },
+                    });
+                } catch (err) {
+                    alert(`녹음을 시작할 수 없습니다: ${err.message}`);
+                    isRecording = false;
+                    micBtn.classList.remove('recording');
+                    if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
+                }
             } else {
                 isRecording = false;
-                stopSpeechRecognition();
+                if (stopRecording) {
+                    try {
+                        const { transcript, audioDataUrl } = await stopRecording();
+                        updateSession({ transcript, audioUrl: audioDataUrl });
+                        if (transcriptInput) transcriptInput.value = transcript;
+                    } catch (err) {
+                        alert(`녹음 처리에 실패했습니다: ${err.message}`);
+                    } finally {
+                        stopRecording = null;
+                    }
+                }
                 micBtn.classList.remove('recording');
                 if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
                 if (recordingStatus) recordingStatus.classList.add('hidden');
@@ -418,20 +495,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sendExperienceBtn) {
         sendExperienceBtn.addEventListener('click', async () => {
             const transcriptInput = document.getElementById('transcriptInput');
-            const transcript = transcriptInput ? transcriptInput.value.trim() : '';
+            const currentTranscript = transcriptInput ? transcriptInput.value.trim() : '';
 
-            if (!transcript) {
+            if (!currentTranscript) {
                 alert('경험 내용을 말씀해 주세요!');
                 return;
             }
 
-            updateSession({ transcript });
-            const session = loadSession();
+            // Use the current text from the UI as the source of truth
+            updateSession({ transcript: currentTranscript });
+            const session = loadSession(); // Reload session to have the latest transcript
 
             try {
                 const mentorResult = await processMentorAnswer({
                     question: session.mentorQuestion || '어르신의 경험을 말씀해 주세요.',
-                    transcript,
+                    transcript: currentTranscript, // Use the UI value for the API call
                     selectedMatch: session.match ? session.match.selected : null
                 });
 
@@ -441,9 +519,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (letterText && mentorResult.data.letter) {
                         letterText.innerText = mentorResult.data.letter;
                     }
+                } else {
+                  // Handle AI processing failure
+                  alert(mentorResult?.error?.message || '답변 처리 중 오류가 발생했습니다.');
                 }
             } catch (err) {
                 console.error("어르신 답변 제출 오류:", err);
+                alert('답변 제출 중 심각한 오류가 발생했습니다.');
             }
 
             if (questionSection) questionSection.classList.add('hidden');

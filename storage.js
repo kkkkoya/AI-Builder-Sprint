@@ -11,6 +11,7 @@ const DEFAULT_SESSION = {
   transcript: "",
   mentorResult: null,
   feedback: null,
+  audioUrl: "", // 녹음된 음성 파일 URL
   updatedAt: ""
 };
 

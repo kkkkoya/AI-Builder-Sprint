@@ -47,13 +47,12 @@ export const AI_MODES = Object.freeze({
 
 /*
  * 현재는 Mock 모드로 실행한다.
- *
- * 실제 Solar 연결 단계에서 다음처럼 변경한다.
- *
- * export const AI_MODE = AI_MODES.SOLAR;
- */
-export const AI_MODE = AI_MODES.MOCK;
-
+ /*
+  * 실제 Solar 연결 단계에서 다음처럼 변경한다.
+  *
+  * export const AI_MODE = AI_MODES.SOLAR;
+  */
+ export const AI_MODE = AI_MODES.SOLAR;
 /*
  * 서버에 전달할 AI 작업 이름이다.
  */
@@ -1480,6 +1479,8 @@ export async function matchExperience(
         false
       );
     } catch (error) {
+      console.error("[matchExperience Solar Error]", error);
+      
       /*
        * Solar가 실패하면 matching.js의
        * 규칙 기반 비상 추천을 사용한다.
