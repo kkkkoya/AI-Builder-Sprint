@@ -57,6 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('hero-title').innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
                 if (seniorStartButton) seniorStartButton.classList.remove('hidden');
                 if (pregnantStartButton) pregnantStartButton.classList.add('hidden');
+                
+                const savedSeniorText = localStorage.getItem('seniorRecordText');
+                const mypageSttText = document.getElementById('mypage-stt-text');
+            
+                if (mypageSttText && savedSeniorText) {
+                    mypageSttText.textContent = `"${savedSeniorText}"`;
+                }
             }
         }
     }
@@ -288,6 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sendExperienceBtn) {
         sendExperienceBtn.addEventListener('click', () => {
+            
+            const transcriptInput = document.getElementById('transcriptInput');
+            if (transcriptInput) {
+                localStorage.setItem('seniorRecordText', transcriptInput.value);
+            }
+
             questionSection.classList.add('hidden');
             recordSection.classList.add('hidden');
             thankYouSection.classList.remove('hidden');
