@@ -3,18 +3,30 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이어봄 - 임산부 모드</title>
+    <title>임산부 모드</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
 </head>
 <body class="fade-in">
+
+    <header class="global-top-header">
+        <!-- 👈 왼쪽: 뒤로가기 버튼 -->
+        <button class="button header-close-btn" onclick="window.location.href='index.html'">‹ 뒤로가기</button>
+        
+        <!-- 👉 오른쪽: 로고 (및 프로필 버튼) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img class="brand-logo-content" src="이어봄(글자없).png">
+            <button id="main-profile-btn" class="profile-top-btn hidden">👤 프로필</button>
+        </div>
+    </header>
 
     <main class="container">
         <!-- 1단계: 고민 작성하기 (B용 ID 덧붙임) -->
         <section id="step1-section" class="card-box">
             <div id="concernInputSection" style="width:100%">
                 <div class="baby-welcome-header">
-                    <span class="baby-icon-large">👶🏻</span>
+                    <!-- 기본 화면 일러스트/아이콘: 크기 조정을 위해 클래스 변경 -->
+                    <span class="illustration-icon-content">👶🏻</span>
                     <h1>어떤 마음이 들고 계시나요?<br>당신의 고민을 들려주세요.</h1>
                 </div>
                 <textarea id="pregnancy-input" class="info-textarea"></textarea>
@@ -130,6 +142,6 @@
         </section>
     </main>
 
-    <script src="ui.js"></script>
+    <script type="module" src="ui.js"></script>
 </body>
 </html>

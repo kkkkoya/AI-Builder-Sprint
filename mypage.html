@@ -11,24 +11,28 @@
 
     <!-- 📱 스플래시 스크린 -->
     <div id="splash-screen" class="hidden">
-        <div class="splash-content">
-            <div class="splash-logo">🌸</div>
-            <h1 class="splash-title">이어봄</h1>
-            <p class="splash-sub">세대와 세대를 이어보다</p>
+        <!-- index.html과 동일한 이미지 기반 스플래시로 업데이트 -->
+        <div class="splash-logo-container-transition">
+            <!-- 화면 전환 시 그림: 크기 확대를 위해 클래스 변경 -->
+            <img class="brand-logo-transition" src="이어봄.png">
         </div>
     </div>
 
     <!-- 📱 마이페이지 전용 전체 상단 헤더 (화면 위 양 옆 고정) -->
     <header class="global-top-header">
         <button id="mypage-back-btn" class="button header-close-btn">‹ 닫기</button>
-        <div class="brand-logo">🌸 이어봄</div>
+        <div>
+            <!-- 기본 화면 로고: 크기 조정을 위해 클래스 변경 (텍스트 대신 이미지 사용) -->
+            <img class="brand-logo-content" src="이어봄(글자없).png">
+        </div>
     </header>
 
     <main class="container">
         <div class="card-box mypage-card">
             <!-- 사용자 인적사항 요약 카드 -->
             <div class="profile-info-header">
-                <span id="profile-user-avatar" class="profile-avatar-large">👤</span>
+                <!-- 기본 화면 아바타: 크기 조정을 위해 클래스 변경 -->
+                <span id="profile-user-avatar" class="avatar-large-content">👤</span>
                 <h2 id="profile-user-name">사용자 이름</h2>
                 <p id="profile-user-detail" class="mypage-sub">인적사항 정보가 들어갑니다.</p>
             </div>

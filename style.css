@@ -12,12 +12,23 @@ body {
     background: linear-gradient(135deg, #FFAAA5 0%, #FFD3B6 50%, #FF8B94 100%);
     background-size: 200% 200%;
     animation: warmAurora 14s ease infinite;
-    margin: 0; padding: 0;
-    width: 100vw; min-height: 100vh;
-    display: flex; justify-content: center; align-items: center;
-    box-sizing: border-box; color: #333333; position: relative;
+    margin: 0; 
+    padding: 0;
+    
+    /* 👇 1. 100vw를 100%로 변경하세요 */
+    width: 100%; 
+    min-height: 100vh;
+    
+    /* 👇 2. 혹시 모를 가로 넘침을 숨기는 코드 추가 */
+    overflow-x: hidden; 
+    
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    box-sizing: border-box; 
+    color: #333333; 
+    position: relative;
 }
-
 @keyframes warmAurora {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -33,22 +44,20 @@ body {
 /* 📱 전체 화면 상단 헤더 고정 (마이페이지 & 메인 화면 공통 적용) */
 .global-top-header {
     position: absolute;
-    top: 24px;
-    left: 24px;
-    right: 24px;
+    top: 12px;  /* 기존 24px에서 축소하여 더 위로 이동 */
+    left: 12px; /* 기존 24px에서 축소하여 더 왼쪽으로 이동 */
+    right: 16px;
     display: flex;
-    align-items: center;
+    align-items: center; /* 내부 요소(로고와 버튼)를 수직 중앙(같은 선상)에 정렬 */
     justify-content: space-between;
     z-index: 100;
     box-sizing: border-box;
 }
 
 .brand-logo {
-    font-size: 22px;
-    font-weight: bold;
-    color: #ffffff;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    white-space: nowrap;
+    height: 130px;
+    width: auto; /* 비율에 맞게 가로 크기 자동 조절 */
+    object-fit: contain;
 }
 
 .header-close-btn { 
@@ -226,3 +235,64 @@ audio { width: 100%; height: 36px; }
 .stt-title { font-size: 12px; font-weight: bold; color: #2e7d32; margin: 0 0 4px 0; }
 .stt-text { font-size: 13px; margin: 0; line-height: 1.5; color: #1b5e20; }
 .mypage-logout-btn { width: 100%; padding: 12px 20px; font-size: 14px; font-weight: bold; border-radius: 20px; margin-top: 10px; }
+
+/* ==========================================
+   추가/수정할 CSS 클래스
+   ========================================== */
+
+/* 🖼️ 화면 전환 시 사용되는 이어봄 그림 (확대 및 다른 스타일) */
+.brand-logo-transition {
+    /* 기존 height: 130px; -> 더 크게 변경 (예: 250px 또는 300px) */
+    height: 200px; 
+    width: auto;
+    object-fit: contain;
+    /* 스플래시 화면에 더 어울리는 추가 스타일 (예: 더 부드러운 애니메이션) */
+}
+
+/* 🖼️ 화면 전환용 로고를 감싸는 컨테이너 */
+.splash-logo-container-transition {
+    /* 기존 스타일 그대로 유지하거나, 필요에 따라 추가 */
+}
+
+/* 🖼️ 기본 화면의 이어봄 로고 (헤더 등) - 기존 style.css의 .brand-logo 스타일을 이 클래스로 이동 */
+.brand-logo-content {
+    height: 50px; /* 기존 130px은 헤더용으로 너무 커서 비율이 어긋날 수 있으므로 축소[cite: 5] */
+    width: auto;
+    object-fit: contain;
+    display: block; /* 이미지 하단의 미세한 기본 여백 제거 */
+    margin-top: 10px; /* 양수(5px)를 넣으면 로고만 살짝 아래로, 음수(-5px)를 넣으면 위로 이동합니다 */
+    margin-left: 13px;
+}
+
+/* 🖼️ 기본 화면의 아바타 (임산부, 어르신) - 기존 .profile-avatar-large 스타일을 이 클래스로 이동 */
+.avatar-large-content {
+    font-size: 48px;
+    line-height: 1;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+/* 🖼️ 기본 화면의 일러스트 (아기 이모지 등) - 기존 .baby-emoji 스타일을 이 클래스로 이동 */
+.illustration-emoji-content {
+    font-size: 50px;
+}
+
+/* 🖼️ 기본 화면의 일러스트 박스 - 기존 .baby-illustration-box 스타일을 이 클래스로 이동 */
+.illustration-box-content {
+    position: relative;
+    background-color: #ffffff;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    border: 4px solid #ffffff;
+    margin-top: 10px;
+}
+
+/* 🖼️ 기본 화면의 아이콘 (아기 아이콘, 마이크 아이콘) */
+.icon-large-content, .icon-mic-content {
+    /* 기존 관련 스타일 이동 및 필요에 따라 추가 */
+}
