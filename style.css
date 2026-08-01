@@ -296,3 +296,24 @@ audio { width: 100%; height: 36px; }
 .icon-large-content, .icon-mic-content {
     /* 기존 관련 스타일 이동 및 필요에 따라 추가 */
 }
+/* 💌 어르신 마이페이지: 산모의 반응 박스 스타일 */
+.received-reaction-box {
+    background-color: #fff3e0;
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 10px;
+    border: 1px dashed #ffb74d;
+}
+.reaction-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #e65100;
+    margin: 0 0 6px 0;
+}
+.reaction-text {
+    font-size: 15px;
+    color: #d84315;
+    font-weight: bold;
+    margin: 0;
+    word-break: keep-all;
+}

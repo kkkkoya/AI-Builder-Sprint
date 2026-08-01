@@ -146,6 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pregnantHistoryView) pregnantHistoryView.classList.remove('hidden');
             if (seniorHistoryView) seniorHistoryView.classList.add('hidden');
 
+            const savedReaction = localStorage.getItem('userThankReactionText');
+            const reactionDisplay = document.getElementById('senior-received-reaction');
+            if (reactionDisplay && savedReaction) {
+                reactionDisplay.textContent = `"${savedReaction}"`;
+            }
+
         } else if (userRole === 'senior') {
             const name = localStorage.getItem('seniorName') || '김정희';
             const age = localStorage.getItem('seniorAge') || '72';
