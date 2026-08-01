@@ -11,3 +11,4 @@ node_modules/
 # 운영체제에서 자동 생성되는 파일
 .DS_Store
 Thumbs.db
+.vercel

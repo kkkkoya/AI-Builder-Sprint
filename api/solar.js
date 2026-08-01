@@ -22,8 +22,10 @@ const SOLAR_MODEL = "solar-pro3";
 
 /*
  * Solar 응답을 기다릴 최대 시간이다.
+ * Solar Pro 3가 긴 프롬프트를 처리할 시간을
+ * 충분히 확보하기 위해 2분으로 설정한다.
  */
-const REQUEST_TIMEOUT_MS = 35000;
+const REQUEST_TIMEOUT_MS = 120000;
 
 /*
  * 현재 고민 분석 결과에 사용할 수 있는
@@ -627,6 +629,22 @@ SAFETY:
 - 같은 의미의 태그를 중복해서 반환하지 마라.
 - CLARIFICATION이면 사용자가 쉽게 답할 수 있는 질문을 한 개만 생성하라.
 - NO_MATCH 또는 SAFETY이면 response에 짧고 이해하기 쉬운 안내를 작성하라.
+
+[출력 정확성 규칙]
+
+- route가 IN_SCOPE이면 response는 반드시 빈 문자열 ""로 작성하라.
+- route가 CLARIFICATION이면 response는 빈 문자열로 작성하고 clarifyingQuestion만 생성하라.
+- response에 직접적인 위로, 상담, 조언, 해결책을 작성하지 마라.
+- 사용자의 현재 상황과 사용자가 걱정하는 미래 상황을 구분하라.
+- “출산 후 일을 못 할까 걱정된다”는 말만으로 사용자가 이미 출산했거나 육아 중이라고 판단하지 마라.
+- situation에는 사용자 입력에서 확인할 수 있는 사실만 작성하라.
+- concerns의 type은 영어 코드가 아니라 짧은 한국어 명사구로 작성하라.
+- emotions의 name은 다음 한국어 표현 중 가장 가까운 것을 사용하라:
+  두려움, 불안, 부담감, 외로움, 죄책감, 막막함, 슬픔, 분노, 지침, 혼란, 안도, 희망
+- 일반적인 출산, 육아, 가족, 경력 고민의 urgency는 normal이다.
+- 전문적인 확인이 필요할 가능성이 명확히 드러날 때만 caution을 사용하라.
+- 즉각적인 안전 확인이 우선인 경우에만 urgent를 사용하라.
+- 단순히 불안하거나 무섭다는 감정 표현만으로 caution 또는 urgent를 선택하지 마라.
 
 [사용 가능한 표준 태그]
 
