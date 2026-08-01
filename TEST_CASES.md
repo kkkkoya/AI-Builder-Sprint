@@ -21,7 +21,7 @@
 현재 기본 실행 모드:
 
 ```js
-export const AI_MODE = AI_MODES.MOCK;
+export const AI_MODE = AI_MODES.SOLAR;
 ```
 
 현재 데이터:
@@ -32,9 +32,8 @@ export const AI_MODE = AI_MODES.MOCK;
 데이터 파일: dummy_mentors.json
 ```
 
-실제 Solar 연결 전에는 Mock 결과와 규칙 기반 fallback을 중심으로 검사한다.
-
-Solar 연결 후 같은 테스트를 다시 실행해 결과를 비교한다.
+기본 흐름은 Solar 결과를 검사하고, Solar 요청 실패 시 같은 테스트로
+fallback 결과와 `meta.usedFallback`을 함께 확인한다.
 
 ---
 
@@ -507,21 +506,20 @@ fallback 추천 실행 또는 NO_MATCH 반환
 
 ---
 
-## TC-14. 중복 경험 제거
+## TC-14. 최종 경험 한 개 유지
 
 ### AI 반환 예시
 
 ```text
 selected: experience-006
-alternative 1: experience-006
-alternative 2: experience-009
+alternatives: []
 ```
 
 ### 기대 결과
 
 ```text
-alternatives에서 experience-006 제거
-experience-009만 유지
+selected는 experience-006 한 개만 유지
+alternatives는 빈 배열 유지
 ```
 
 ### 결과
