@@ -20,10 +20,16 @@ export async function startRecordingAndTranscription({
   onFinalResult,
   onError,
 }) {
+  if (
+    mediaRecorder?.state === "recording" ||
+    recognition
+  ) {
+    throw new Error("Recording is already in progress");
+  }
+
   if (!isRecordingSupported()) {
     const err = new Error("Recording APIs not supported");
-    if (onError) onError(err);
-    return null;
+    throw err;
   }
 
   // 1. Get audio stream
@@ -32,8 +38,7 @@ export async function startRecordingAndTranscription({
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (err) {
     console.error("[Recorder] Error getting media stream:", err);
-    if (onError) onError(err);
-    return;
+    throw err;
   }
 
   // 2. Setup MediaRecorder
@@ -51,6 +56,7 @@ export async function startRecordingAndTranscription({
   recognition.lang = "ko-KR";
 
   let finalTranscript = "";
+  let latestTranscript = "";
 
   recognition.onstart = () => {
     if (onStart) onStart();
@@ -62,11 +68,16 @@ export async function startRecordingAndTranscription({
       const transcriptText = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
         finalTranscript += transcriptText;
-        if (onFinalResult) onFinalResult(finalTranscript);
       } else {
         interimTranscript += transcriptText;
-        if (onInterimResult) onInterimResult(interimTranscript);
       }
+    }
+
+    latestTranscript = `${finalTranscript} ${interimTranscript}`.trim();
+    if (interimTranscript) {
+      if (onInterimResult) onInterimResult(latestTranscript);
+    } else if (onFinalResult) {
+      onFinalResult(finalTranscript.trim());
     }
   };
 
@@ -76,8 +87,20 @@ export async function startRecordingAndTranscription({
   };
 
   // 4. Start both
-  mediaRecorder.start();
-  recognition.start();
+  try {
+    mediaRecorder.start();
+    recognition.start();
+  } catch (err) {
+    try {
+      recognition?.abort?.();
+    } catch {
+      // 이미 종료된 음성 인식기는 추가 정리가 필요하지 않다.
+    }
+    stream.getTracks().forEach(track => track.stop());
+    mediaRecorder = null;
+    recognition = null;
+    throw err;
+  }
 
   // Return a function to stop the recording
   return function stopRecordingAndTranscription() {
@@ -93,12 +116,13 @@ export async function startRecordingAndTranscription({
             stream.getTracks().forEach(track => track.stop());
             mediaRecorder = null;
             resolve({
-              transcript: finalTranscript,
+              transcript: latestTranscript || finalTranscript.trim(),
               audioDataUrl: base64data
             });
           };
           reader.onerror = (err) => {
              stream.getTracks().forEach(track => track.stop());
+             mediaRecorder = null;
              reject(err);
           };
         };
@@ -107,7 +131,7 @@ export async function startRecordingAndTranscription({
         recognition = null;
       } else {
         resolve({
-          transcript: finalTranscript,
+          transcript: latestTranscript || finalTranscript.trim(),
           audioDataUrl: null
         });
       }

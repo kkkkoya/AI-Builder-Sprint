@@ -191,6 +191,7 @@ textarea:focus { border-color: lightcoral; }
 .senior-page .profile-top-btn { font-size: 15px !important; }
 .senior-page .senior-card { padding: 34px 26px; gap: 20px; }
 .senior-page .question-badge { font-size: 17px; padding: 7px 18px; }
+.senior-page .empty-sub { font-size: 16px; line-height: 1.7; word-break: keep-all; }
 .senior-page .senior-question-title { font-size: 23px; line-height: 1.65; }
 .senior-page .senior-guide { font-size: 19px; line-height: 1.7; }
 .senior-page .senior-mic-btn #mic-btn-label { font-size: 20px; }
@@ -205,6 +206,22 @@ textarea:focus { border-color: lightcoral; }
 .senior-page #letterResultSection details { width: 100%; font-size: 17px; line-height: 1.7; text-align: left; }
 .senior-page #letterResultSection summary { padding: 8px 2px; font-weight: bold; cursor: pointer; }
 .senior-page #letterResultSection .tag { font-size: 15px; padding: 7px 13px; }
+.senior-page .experience-keyword-section { width: 100%; margin: 2px 0 8px; }
+.senior-page .experience-keyword-label { margin: 0 0 11px; color: #7a5a00; font-size: 16px; font-weight: bold; }
+.senior-page .experience-keyword-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.senior-page .experience-keyword-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 7px 15px;
+    border: 1px solid rgba(230, 162, 0, 0.55);
+    border-radius: 999px;
+    background: #fff8df;
+    color: #6f5100;
+    box-shadow: 0 2px 7px rgba(122, 90, 0, 0.08);
+    line-height: 1.25;
+    word-break: keep-all;
+}
 .senior-page #letterResultSection .button,
 .senior-page #thank-you-section .button { min-height: 58px; padding: 16px 22px; font-size: 18px; }
 .senior-page #letterResultSection .button + .button,

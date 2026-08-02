@@ -9,9 +9,7 @@ import {
 
 import {
   loadSession,
-  saveSession,
   updateSession,
-  clearSession,
 } from "./storage.js";
 
 import {
@@ -122,7 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setText('receivedLetterText', result.letter || '');
         setText('letterText', result.letter || '');
         replaceTextItems('editList', result.edits || [], 'li');
-        replaceTextItems('experienceTags', result.experienceCard?.standardTags || []);
+        const experienceTags = document.getElementById('experienceTags');
+        if (experienceTags) {
+            experienceTags.replaceChildren();
+            (result.experienceCard?.standardTags || []).forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'tag experience-keyword-chip';
+                chip.textContent = `#${tag}`;
+                experienceTags.appendChild(chip);
+            });
+        }
 
         const safetyText = [
             result.safety?.guidance,
@@ -212,14 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (isRegistered && hasRequiredProfile) {
+            if (mainProfileBtn) mainProfileBtn.classList.remove('hidden');
+        }
+
         if (isRegistered && hasRequiredProfile && mainHeroStep) {
             if (modeSelectStep) modeSelectStep.classList.add('hidden');
             if (pregnantInfoStep) pregnantInfoStep.classList.add('hidden');
             if (seniorInfoStep) seniorInfoStep.classList.add('hidden');
 
             mainHeroStep.classList.remove('hidden');
-            if (mainProfileBtn) mainProfileBtn.classList.remove('hidden');
-
             if (userRole === 'pregnant') {
                 const name = localStorage.getItem('userName') || '지혜맘';
                 const heroTitle = document.getElementById('hero-title');
@@ -383,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (session.audioUrl) {
                 audioPlayers.forEach(player => {
                     player.src = session.audioUrl;
+                    player.closest('.audio-container')?.classList.remove('hidden');
                 });
             }
             if (session.mentorResult?.experienceCard) {
@@ -445,10 +455,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const audio = answerBox?.querySelector('audio');
             if (label) label.textContent = selected.mentorName ? '💌 ' + selected.mentorName + ' 멘토님의 답변' : '';
             if (letter) letter.textContent = session.mentorResult?.letter || selected.letter || '';
-            if (audio && selected.audioUrl) {
-                audio.src = selected.audioUrl;
+            const answerAudioUrl = session.audioUrl || selected.audioUrl || '';
+            if (audio && answerAudioUrl) {
+                audio.src = answerAudioUrl;
+                audio.closest('.audio-container')?.classList.remove('hidden');
             } else if (audio && 'speechSynthesis' in window) {
                 const container = audio.closest('.audio-container');
+                container?.classList.remove('hidden');
                 let speakButton = container?.querySelector('.mentor-speech-button');
                 if (!speakButton && container) {
                     speakButton = document.createElement('button');
@@ -476,7 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setText('mypage-answered-summary', session.match?.selected?.experienceTitle || session.mentorQuestion || '');
             setText('mypage-stt-text', `"${session.transcript}"`);
             const audio = item?.querySelector('audio');
-            if (audio && session.audioUrl) audio.src = session.audioUrl;
+            if (audio && session.audioUrl) {
+                audio.src = session.audioUrl;
+                audio.closest('.audio-container')?.classList.remove('hidden');
+            }
             setText('senior-received-reaction', session.feedback?.message || '감사 메시지가 도착하면 이곳에서 확인할 수 있어요.');
         }
     }
@@ -488,8 +504,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            localStorage.clear();
-            clearSession();
+            [
+                'isRegistered',
+                'userRole',
+                'userName',
+                'userStatus',
+                'seniorName',
+                'seniorAge',
+                'seniorExperienceTags',
+            ].forEach(key => localStorage.removeItem(key));
             window.location.href = 'index.html';
         });
     }
@@ -544,8 +567,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    restorePregnantStep(loadSession());
+    const restoredPregnantSession = loadSession();
+    restorePregnantStep(restoredPregnantSession);
+    let concernAnalysisInFlight = false;
     async function handleConcernAnalysis(content, history) {
+        if (concernAnalysisInFlight) return;
+        concernAnalysisInFlight = true;
         if (step1Section) step1Section.classList.add('hidden');
         if (clarificationSection) clarificationSection.classList.add('hidden');
         if (loadingSection) loadingSection.classList.remove('hidden');
@@ -621,7 +648,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step1Section) step1Section.classList.remove('hidden');
             if (pregnancyInput) pregnancyInput.disabled = false;
             if(submitBtn) submitBtn.disabled = false;
+        } finally {
+            concernAnalysisInFlight = false;
         }
+    }
+
+    if (
+        restoredPregnantSession.currentStep === 'ANALYZING' &&
+        restoredPregnantSession.concernText
+    ) {
+        handleConcernAnalysis(
+            restoredPregnantSession.concernText,
+            restoredPregnantSession.clarificationHistory || []
+        );
+    } else if (restoredPregnantSession.currentStep === 'ANALYZING') {
+        updateSession({ currentStep: 'INPUT' });
+        hideAllPregnantSections();
+        step1Section?.classList.remove('hidden');
     }
 
 
@@ -693,10 +736,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 analysis: null,
                 match: null,
                 mentorQuestion: '',
+                transcript: '',
+                mentorResult: null,
+                mentorDraftResult: null,
+                temporaryMentorTranscript: '',
+                mentorProcessingNotice: '',
                 feedback: null,
+                audioUrl: '',
                 currentStep: 'INPUT',
                 clarifyingQuestion: '',
             });
+            localStorage.removeItem('userPregnancyInput');
+            localStorage.removeItem('userThankReactionText');
         });
     }
 
@@ -780,7 +831,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isRetrying = session.currentStep === 'MENTOR_RETRY';
 
         questionSection.classList.toggle('hidden', hasMentorResult || isReviewing);
-        recordSection?.classList.toggle('hidden', hasMentorResult || isReviewing);
+        const hasQuestion = Boolean(session.mentorQuestion || session.match?.mentorQuestion);
+        recordSection?.classList.toggle('hidden', hasMentorResult || isReviewing || !hasQuestion);
         letterResultSection?.classList.toggle('hidden', !isReviewing);
         thankYouSection?.classList.toggle('hidden', !hasMentorResult);
         temporaryNotice?.classList.toggle('hidden', !isRetrying);
@@ -793,20 +845,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     restoreSeniorStep(sessionData);
     let isRecording = false;
+    let recordingTransitionInFlight = false;
     let stopRecording = null;
 
     if (micBtn) {
         micBtn.addEventListener('click', async () => {
+            if (recordingTransitionInFlight) return;
+            recordingTransitionInFlight = true;
+            micBtn.disabled = true;
             const transcriptInput = document.getElementById('transcriptInput');
-            if (!isRecording) {
-                isRecording = true;
-                micBtn.classList.add('recording');
-                if (micBtnLabel) micBtnLabel.textContent = '말씀 끝내기';
-                if (recordingStatus) recordingStatus.classList.remove('hidden');
-                if (sttResultBox) sttResultBox.classList.add('hidden');
-                if (sendExperienceBtn) sendExperienceBtn.classList.add('hidden');
-                
-                try {
+            try {
+                if (!isRecording) {
+                    if (micBtnLabel) micBtnLabel.textContent = '마이크 준비 중...';
                     stopRecording = await startRecordingAndTranscription({
                         onInterimResult: (text) => {
                             if (transcriptInput) transcriptInput.value = text;
@@ -817,35 +867,48 @@ document.addEventListener('DOMContentLoaded', () => {
                         onError: (err) => {
                             alert(`녹음 중 오류가 발생했습니다: ${err.message}`);
                             isRecording = false;
+                            const stopAfterError = stopRecording;
+                            stopRecording = null;
+                            stopAfterError?.().catch(() => {});
                             micBtn.classList.remove('recording');
                             if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
                             if (recordingStatus) recordingStatus.classList.add('hidden');
                         },
                     });
-                } catch (err) {
-                    alert(`녹음을 시작할 수 없습니다: ${err.message}`);
+                    if (typeof stopRecording !== 'function') {
+                        throw new Error('마이크를 시작하지 못했습니다.');
+                    }
+                    isRecording = true;
+                    micBtn.classList.add('recording');
+                    if (micBtnLabel) micBtnLabel.textContent = '말씀 끝내기';
+                    recordingStatus?.classList.remove('hidden');
+                    sttResultBox?.classList.add('hidden');
+                    sendExperienceBtn?.classList.add('hidden');
+                } else {
+                    if (micBtnLabel) micBtnLabel.textContent = '말씀 저장 중...';
+                    const stopCurrentRecording = stopRecording;
+                    stopRecording = null;
+                    const { transcript, audioDataUrl } = await stopCurrentRecording();
+                    const savedTranscript = transcript?.trim() || transcriptInput?.value.trim() || '';
+                    updateSession({ transcript: savedTranscript, audioUrl: audioDataUrl });
+                    if (transcriptInput) transcriptInput.value = savedTranscript;
                     isRecording = false;
                     micBtn.classList.remove('recording');
-                    if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
+                    if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
+                    recordingStatus?.classList.add('hidden');
+                    sttResultBox?.classList.remove('hidden');
+                    sendExperienceBtn?.classList.toggle('hidden', !savedTranscript);
                 }
-            } else {
+            } catch (err) {
+                alert(`${isRecording ? '녹음 처리' : '녹음 시작'}에 실패했습니다: ${err.message}`);
                 isRecording = false;
-                if (stopRecording) {
-                    try {
-                        const { transcript, audioDataUrl } = await stopRecording();
-                        updateSession({ transcript, audioUrl: audioDataUrl });
-                        if (transcriptInput) transcriptInput.value = transcript;
-                    } catch (err) {
-                        alert(`녹음 처리에 실패했습니다: ${err.message}`);
-                    } finally {
-                        stopRecording = null;
-                    }
-                }
+                stopRecording = null;
                 micBtn.classList.remove('recording');
-                if (micBtnLabel) micBtnLabel.textContent = '다시 말씀하기';
-                if (recordingStatus) recordingStatus.classList.add('hidden');
-                if (sttResultBox) sttResultBox.classList.remove('hidden');
-                if (sendExperienceBtn) sendExperienceBtn.classList.remove('hidden');
+                if (micBtnLabel) micBtnLabel.textContent = '말씀 시작하기';
+                recordingStatus?.classList.add('hidden');
+            } finally {
+                recordingTransitionInFlight = false;
+                micBtn.disabled = false;
             }
         });
     }
@@ -853,6 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function submitMentorTranscript() {
         const transcriptInput = document.getElementById('transcriptInput');
         const currentTranscript = transcriptInput ? transcriptInput.value.trim() : '';
+        const currentSession = loadSession();
+        const currentQuestion = currentSession.mentorQuestion || currentSession.match?.mentorQuestion || '';
+
+        if (!currentQuestion) {
+            alert('아직 도착한 고민이 없어요. 질문을 받은 뒤 경험을 들려주세요.');
+            return;
+        }
 
         if (!currentTranscript) {
             alert('경험 내용을 말씀해 주세요!');
@@ -967,12 +1037,17 @@ document.addEventListener('DOMContentLoaded', () => {
             temporaryNotice?.classList.add('hidden');
             retryMentorProcessingBtn?.classList.add('hidden');
             updateSession({
+                transcript: '',
+                audioUrl: '',
                 mentorResult: null,
                 mentorDraftResult: null,
                 temporaryMentorTranscript: '',
                 mentorProcessingNotice: '',
+                feedback: null,
                 currentStep: 'WAITING_FOR_MENTOR'
             });
+            const transcriptInput = document.getElementById('transcriptInput');
+            if (transcriptInput) transcriptInput.value = '';
         });
     }
 
