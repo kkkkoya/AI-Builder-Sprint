@@ -351,9 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const role = localStorage.getItem('userRole') || '';
         const count = role === 'pregnant'
             ? getUnreadNotificationCount({ role, pregnantUserId: localStorage.getItem('pregnantUserId') || '' })
-            : role === 'senior'
-                ? getUnreadNotificationCount({ role, mentorId: localStorage.getItem('seniorMentorId') || '' })
-                : 0;
+            : 0;
         badge.textContent = count > 9 ? '9+' : String(count || '');
         badge.classList.toggle('hidden', count === 0);
     }
@@ -1162,36 +1160,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     const finalizeMentorResultBtn = document.getElementById('finalize-mentor-result-btn');
     const letterResultSection = document.getElementById('letterResultSection');
 
-    const sessionData = loadSession();
     const loggedInMentorId = localStorage.getItem('seniorMentorId') || '';
-    let activeDemoQuestion = questionSection
-        ? getPendingQuestionsForMentor(loggedInMentorId)[0] || null
-        : null;
+    const pendingDemoQuestions = questionSection
+        ? getPendingQuestionsForMentor(loggedInMentorId)
+        : [];
+    let activeDemoQuestion = null;
     const mentorQuestionText = document.getElementById('mentorQuestionText');
     const mentorEmptyState = document.getElementById('mentor-empty-state');
-    const mentorQuestion = activeDemoQuestion?.mentorQuestion || '';
-    if (mentorQuestionText) {
-        mentorQuestionText.textContent = mentorQuestion ? `"${mentorQuestion}"` : '';
-        mentorQuestionText.classList.toggle('hidden', !mentorQuestion);
-    }
-    if (mentorEmptyState) mentorEmptyState.classList.toggle('hidden', Boolean(mentorQuestion));
+    const mentorQuestionSection = document.getElementById('mentorQuestionSection');
+    let mentorQuestionList = null;
 
-    if (activeDemoQuestion) {
-        markQuestionRead(activeDemoQuestion.questionId, loggedInMentorId);
+    function getConcernSummary(question) {
+        return String(question?.analysis?.summary || question?.originalConcern || '').trim();
+    }
+
+    function selectSeniorQuestion(question) {
+        if (!question || question.mentorId !== loggedInMentorId) return;
+        activeDemoQuestion = question;
+        mentorQuestionList?.classList.add('hidden');
+        mentorEmptyState?.classList.add('hidden');
+        if (mentorQuestionText) {
+            mentorQuestionText.replaceChildren();
+            const concernLabel = document.createElement('span');
+            concernLabel.className = 'senior-concern-label';
+            concernLabel.textContent = '정리된 고민';
+            const concernSummary = document.createElement('span');
+            concernSummary.className = 'senior-concern-summary';
+            concernSummary.textContent = getConcernSummary(question);
+            const questionLabel = document.createElement('span');
+            questionLabel.className = 'senior-question-label';
+            questionLabel.textContent = '어르신께 드리는 질문';
+            const questionText = document.createElement('span');
+            questionText.className = 'senior-question-prompt';
+            questionText.textContent = `“${question.mentorQuestion}”`;
+            mentorQuestionText.append(concernLabel, concernSummary, questionLabel, questionText);
+            mentorQuestionText.classList.remove('hidden');
+        }
+
+        markQuestionRead(question.questionId, loggedInMentorId);
         updateSession({
-            demoQuestionId: activeDemoQuestion.questionId,
-            concernText: activeDemoQuestion.originalConcern,
-            analysis: activeDemoQuestion.analysis,
-            mentorQuestion: activeDemoQuestion.mentorQuestion,
+            demoQuestionId: question.questionId,
+            concernText: question.originalConcern,
+            analysis: question.analysis,
+            mentorQuestion: question.mentorQuestion,
             match: {
-                selected: activeDemoQuestion.selectedMatch || {
-                    mentorId: activeDemoQuestion.mentorId,
-                    mentorName: activeDemoQuestion.mentorName,
-                    mentorAge: activeDemoQuestion.mentorAge,
-                    experienceId: activeDemoQuestion.experienceId,
-                    tags: activeDemoQuestion.matchedTags,
+                selected: question.selectedMatch || {
+                    mentorId: question.mentorId,
+                    mentorName: question.mentorName,
+                    mentorAge: question.mentorAge,
+                    experienceId: question.experienceId,
+                    tags: question.matchedTags,
                 },
-                mentorQuestion: activeDemoQuestion.mentorQuestion,
+                mentorQuestion: question.mentorQuestion,
             },
             transcript: '',
             audioUrl: '',
@@ -1221,7 +1241,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    restoreSeniorStep(loadSession());
+    function renderSeniorQuestionInbox() {
+        mentorQuestionText?.classList.add('hidden');
+        mentorQuestionList?.remove();
+        mentorQuestionList = null;
+
+        if (pendingDemoQuestions.length === 0) {
+            activeDemoQuestion = null;
+            mentorEmptyState?.classList.remove('hidden');
+            restoreSeniorStep(loadSession());
+            return;
+        }
+
+        if (pendingDemoQuestions.length === 1) {
+            selectSeniorQuestion(pendingDemoQuestions[0]);
+            restoreSeniorStep(loadSession());
+            return;
+        }
+
+        activeDemoQuestion = null;
+        mentorEmptyState?.classList.add('hidden');
+        mentorQuestionList = document.createElement('div');
+        mentorQuestionList.id = 'mentor-question-list';
+        mentorQuestionList.className = 'mentor-question-list';
+        const guide = document.createElement('p');
+        guide.className = 'senior-inbox-guide';
+        guide.textContent = '답변하고 싶은 고민을 골라 주세요.';
+        mentorQuestionList.appendChild(guide);
+
+        pendingDemoQuestions.forEach((question, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'mentor-question-choice';
+            const number = document.createElement('span');
+            number.className = 'mentor-question-choice-number';
+            number.textContent = `고민 ${index + 1}`;
+            const summary = document.createElement('span');
+            summary.className = 'mentor-question-choice-summary';
+            summary.textContent = getConcernSummary(question);
+            button.append(number, summary);
+            button.addEventListener('click', () => {
+                selectSeniorQuestion(question);
+                restoreSeniorStep(loadSession());
+            });
+            mentorQuestionList.appendChild(button);
+        });
+        mentorQuestionSection?.appendChild(mentorQuestionList);
+        restoreSeniorStep(loadSession());
+    }
+
+    renderSeniorQuestionInbox();
     let isRecording = false;
     let recordingTransitionInFlight = false;
     let stopRecording = null;

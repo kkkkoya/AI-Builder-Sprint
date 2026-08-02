@@ -57,6 +57,22 @@ test("질문 없는 어르신 제출을 차단하고 도착 알림을 안내한�
   assert.match(demo, /서로 다른 기기나 브라우저 사이의 실제 전달 기능은 아직 구현되지 않았습니다/);
 });
 
+test("어르신 화면은 AI 고민 요약을 보여주고 여러 질문 중 하나를 선택한다", async () => {
+  const ui = await readProjectFile("ui.js");
+  assert.match(ui, /question\?\.analysis\?\.summary \|\| question\?\.originalConcern/);
+  assert.match(ui, /concernLabel\.textContent = '정리된 고민'/);
+  assert.match(ui, /questionLabel\.textContent = '어르신께 드리는 질문'/);
+  assert.match(ui, /pendingDemoQuestions\.length === 1/);
+  assert.match(ui, /답변하고 싶은 고민을 골라 주세요/);
+  assert.match(ui, /button\.addEventListener\('click',[\s\S]*selectSeniorQuestion\(question\)/);
+});
+
+test("어르신 프로필에는 질문 알림 숫자를 표시하지 않는다", async () => {
+  const ui = await readProjectFile("ui.js");
+  assert.match(ui, /const count = role === 'pregnant'[\s\S]*: 0;/);
+  assert.doesNotMatch(ui, /role === 'senior'[\s\S]*getUnreadNotificationCount/);
+});
+
 test("정리된 경험 키워드는 해시 태그 칩으로 표시한다", async () => {
   const [ui, seniorHtml, style] = await Promise.all([
     readProjectFile("ui.js"),
