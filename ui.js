@@ -20,11 +20,12 @@ import {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    function setText(id, value) {
+    function setText(id, value, fallback = '') {
         const element = document.getElementById(id);
-        if (element && typeof value === 'string' && value.trim()) {
-            element.textContent = value.trim();
-        }
+        if (!element) return;
+
+        const text = typeof value === 'string' ? value.trim() : '';
+        element.textContent = text || fallback;
     }
 
     function replaceTextItems(id, values, itemTag = 'p') {
@@ -42,96 +43,77 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    function renderAnalysis(analysis) {
-        if (!analysis) return;
-
-        const section = document.getElementById('analysisSection');
-        if (section) section.style.display = 'block';
-
-        setText('analysisSummary', analysis.summary || '');
-        replaceTextItems(
-            'analysisConcerns',
-            (analysis.concerns || []).map(concern =>
-                `${concern.priority || '-'}순위 · ${concern.type || '고민'}: ${concern.description || ''}`
-            )
-        );
-        replaceTextItems(
-            'analysisEmotions',
-            (analysis.emotions || []).map(emotion =>
-                `${emotion.name || '감정'} ${Number.isFinite(emotion.intensity) ? `(${emotion.intensity})` : ''}`.trim()
-            )
-        );
-        replaceTextItems('analysisNeeds', analysis.needs || []);
-        replaceTextItems('analysisTags', analysis.standardTags || []);
-
-        const issueTags = document.getElementById('issue-tags');
-        if (issueTags) {
-            issueTags.replaceChildren();
-            (analysis.standardTags || []).forEach(tag => {
-                const tagElement = document.createElement('span');
-                tagElement.className = 'tag';
-                tagElement.textContent = `#${tag}`;
-                issueTags.appendChild(tagElement);
-            });
-        }
+    function renderAnalysis() {
+        // Analysis is stored for matching only and is not rendered to the user.
     }
 
     function renderMatch(match) {
         const selected = match?.selected;
+        const list = document.getElementById('experience-card-list');
+        if (!list) return;
+
+        list.replaceChildren();
         if (!selected) return;
-
-        const section = document.getElementById('matchSection');
-        if (section) section.style.display = 'block';
-
-        setText('mentorName', selected.mentorName || '이름을 확인 중인 멘토');
-        setText('experienceTitle', selected.experienceTitle || '연결된 경험');
-        setText('matchScore', `관련도 점수 ${selected.totalScore ?? 0}점`);
-        setText('matchReason', selected.reason || '');
-        replaceTextItems('matchEvidence', selected.evidence || [], 'li');
-        setText('matchLimitation', selected.limitations || '');
-        setText('mentorQuestionPreview', match.mentorQuestion || '');
-
-        const mentorName = document.querySelector('#recommended-card-section .mentor-info strong');
-        const summary = document.querySelector('#recommended-card-section .experience-card .summary');
-        if (mentorName) mentorName.textContent = `${selected.mentorName || '어르신'} 멘토`;
-        if (summary) summary.textContent = selected.reason || selected.experienceTitle || '';
-
-        const letterHeader = document.querySelector('#letter-detail-section .mentor-header h2');
-        if (letterHeader) {
-            const ageText = selected.mentorAge ? ` (${selected.mentorAge}세)` : '';
-            letterHeader.textContent = `${selected.mentorName || '어르신'} 멘토님${ageText}의 경험 편지`;
+        const card = document.createElement('div');
+        card.className = 'experience-card';
+        const mentor = document.createElement('div');
+        mentor.className = 'mentor-info';
+        const mentorName = document.createElement('strong');
+        mentorName.textContent = `${selected.mentorName || '멘토'} 멘토`;
+        mentor.appendChild(mentorName);
+        if (selected.mentorAge) {
+            const age = document.createElement('span');
+            age.className = 'age';
+            age.textContent = ` (${selected.mentorAge}세)`;
+            mentor.appendChild(age);
         }
-
-        if (selected.letter) {
-            setText('receivedLetterText', selected.letter);
-        }
-
-        const letterTags = document.querySelector('#letter-detail-section .mentor-header .tag-group');
-        if (letterTags) {
-            letterTags.replaceChildren();
+        const summary = document.createElement('p');
+        summary.className = 'summary';
+        summary.textContent = selected.summary || selected.experienceTitle || '';
+        const openLetter = document.createElement('button');
+        openLetter.type = 'button';
+        openLetter.className = 'button secondary-btn';
+        openLetter.textContent = '멘토의 경험 편지 읽기';
+        openLetter.addEventListener('click', () => {
+            updateSession({ currentStep: 'WAITING_FOR_MENTOR' });
+            document.getElementById('recommended-card-section')?.classList.add('hidden');
+            document.getElementById('letter-detail-section')?.classList.remove('hidden');
+        });
+        card.append(mentor, summary, openLetter);
+        list.appendChild(card);
+        setText('letter-mentor-title', selected.mentorName ? selected.mentorName + ' 멘토님의 경험 편지' : '');
+        setText('receivedLetterText', selected.letter || '');
+        const issueTags = document.getElementById('issue-tags');
+        if (issueTags) {
+            issueTags.replaceChildren();
             (selected.tags || []).forEach(tag => {
-                const tagElement = document.createElement('span');
-                tagElement.className = 'tag';
-                tagElement.textContent = `#${tag}`;
-                letterTags.appendChild(tagElement);
+                const chip = document.createElement('span');
+                chip.className = 'tag';
+                chip.textContent = '#' + tag;
+                issueTags.appendChild(chip);
             });
         }
-
+        const tags = document.getElementById('letter-tags');
+        if (tags) {
+            tags.replaceChildren();
+            (selected.tags || []).forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'tag';
+                chip.textContent = `#${tag}`;
+                tags.appendChild(chip);
+            });
+        }
+        const audioContainer = document.getElementById('letter-audio-container');
         const audioPlayer = document.getElementById('audio-player');
         if (audioPlayer && selected.audioUrl) {
             audioPlayer.src = selected.audioUrl;
+            audioContainer?.classList.remove('hidden');
+        } else {
+            audioContainer?.classList.add('hidden');
         }
-
-        const selectedSafety = [
-            selected.safety?.guidance,
-            ...(selected.safety?.flags || []),
-        ].filter(Boolean).join(' ');
-
-        if (selectedSafety) {
-            setText('receivedSafetyNotice', selectedSafety);
-        }
+        const safety = document.getElementById('receivedSafetyNotice');
+        if (safety) safety.textContent = [selected.safety?.guidance, ...(selected.safety?.flags || [])].filter(Boolean).join(' ');
     }
-
     function renderMentorResult(result) {
         if (!result) return;
 
@@ -146,11 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
             ...(result.fidelity?.warnings || []),
         ].filter(Boolean).join(' ');
 
-        setText('safetyBox', safetyText || '한 사람의 개인적인 경험입니다.');
+        setText('safetyBox', safetyText);
 
         const safetyNotice = document.getElementById('receivedSafetyNotice');
         if (safetyNotice) {
-            safetyNotice.textContent = safetyText || '이 편지는 한 사람의 개인적인 경험입니다.';
+            safetyNotice.textContent = safetyText;
         }
 
         const resultSection = document.getElementById('letterResultSection');
@@ -222,8 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (pregnantStartButton) pregnantStartButton.classList.remove('hidden');
                 if (seniorStartButton) seniorStartButton.classList.add('hidden');
             } else if (userRole === 'senior') {
-                const name = localStorage.getItem('seniorName') || '김정희';
-                const age = localStorage.getItem('seniorAge') || '72';
+                const name = localStorage.getItem('seniorName') || '어르신';
+                const age = localStorage.getItem('seniorAge') || '';
                 const heroTitle = document.getElementById('hero-title');
                 if (heroTitle) heroTitle.innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
                 if (seniorStartButton) seniorStartButton.classList.remove('hidden');
@@ -270,8 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
         startSeniorBtn.addEventListener('click', () => {
             const nameInput = document.getElementById('senior-name');
             const ageInput = document.getElementById('senior-age');
-            const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '김정희';
-            const age = (ageInput && ageInput.value.trim()) ? ageInput.value.trim() : '72';
+            const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '어르신';
+            const age = (ageInput && ageInput.value.trim()) ? ageInput.value.trim() : '';
 
             localStorage.setItem('isRegistered', 'true');
             localStorage.setItem('seniorName', name);
@@ -329,12 +311,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } else if (userRole === 'senior') {
-            const name = localStorage.getItem('seniorName') || '김정희';
-            const age = localStorage.getItem('seniorAge') || '72';
+            const name = localStorage.getItem('seniorName') || '어르신';
+            const age = localStorage.getItem('seniorAge') || '';
 
             if (profileUserAvatar) profileUserAvatar.textContent = '👵';
             profileUserName.textContent = `${name} 멘토님`;
-            if (profileUserDetail) profileUserDetail.textContent = `연령: ${age}세`;
+            if (profileUserDetail) profileUserDetail.textContent = age ? '연령: ' + age + '세' : '';
 
             if (seniorHistoryView) seniorHistoryView.classList.remove('hidden');
             if (pregnantHistoryView) pregnantHistoryView.classList.add('hidden');
@@ -367,6 +349,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Profile cards show user-facing records only; raw AI analysis is never rendered here.
+    function renderProfileHistory() {
+        if (!profileUserName) return;
+
+        const session = loadSession();
+        const isPregnant = (localStorage.getItem('userRole') || 'pregnant') === 'pregnant';
+        const toggle = (element, visible) => element?.classList.toggle('hidden', !visible);
+
+        if (isPregnant) {
+            const empty = document.getElementById('pregnant-empty-state');
+            const item = document.getElementById('pregnant-history-item');
+            const concern = document.getElementById('mypage-user-concern');
+            const answerBox = item?.querySelector('.matched-answer-box');
+            const selected = session.match?.selected;
+            toggle(empty, !session.concernText);
+            toggle(item, Boolean(session.concernText));
+            if (!session.concernText) return;
+            if (concern) concern.textContent = `"${session.concernText}"`;
+            toggle(answerBox, Boolean(selected));
+
+            let status = document.getElementById('profile-match-status');
+            if (!status && item) {
+                status = document.createElement('p');
+                status.id = 'profile-match-status';
+                status.className = 'empty-sub';
+                item.appendChild(status);
+            }
+            if (!selected) {
+                if (status) status.textContent = '아직 전달된 경험이 없어요.';
+                return;
+            }
+            if (status) status.remove();
+            document.getElementById('profile-fallback-wisdom')?.remove();
+            const label = answerBox?.querySelector('.mentor-label');
+            const letter = answerBox?.querySelector('.answer-text');
+            const audio = answerBox?.querySelector('audio');
+            if (label) label.textContent = selected.mentorName ? '💌 ' + selected.mentorName + ' 멘토님의 답변' : '';
+            if (letter) letter.textContent = session.mentorResult?.letter || selected.letter || '';
+            if (audio && selected.audioUrl) {
+                audio.src = selected.audioUrl;
+            } else if (audio && 'speechSynthesis' in window) {
+                const container = audio.closest('.audio-container');
+                let speakButton = container?.querySelector('.mentor-speech-button');
+                if (!speakButton && container) {
+                    speakButton = document.createElement('button');
+                    speakButton.type = 'button';
+                    speakButton.className = 'button secondary-btn mentor-speech-button';
+                    speakButton.textContent = '답변 음성으로 듣기';
+                    container.appendChild(speakButton);
+                }
+                if (speakButton) {
+                    speakButton.onclick = () => {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(session.mentorResult?.letter || selected.letter || '');
+                        utterance.lang = 'ko-KR';
+                        window.speechSynthesis.speak(utterance);
+                    };
+                }
+            }
+        } else {
+            const empty = document.getElementById('senior-empty-state');
+            const item = document.getElementById('senior-history-item');
+            const hasRecord = Boolean(session.transcript);
+            toggle(empty, !hasRecord);
+            toggle(item, hasRecord);
+            if (!hasRecord) return;
+            setText('mypage-answered-summary', session.match?.selected?.experienceTitle || session.mentorQuestion || '');
+            setText('mypage-stt-text', `"${session.transcript}"`);
+            const audio = item?.querySelector('audio');
+            if (audio && session.audioUrl) audio.src = session.audioUrl;
+            setText('senior-received-reaction', session.feedback?.message || '감사 메시지가 도착하면 이곳에서 확인할 수 있어요.');
+        }
+    }
+
+    renderProfileHistory();
     if (mypageBackBtn) {
         mypageBackBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
@@ -399,13 +456,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const clarificationInput = document.getElementById('clarificationInput');
     const clarificationSubmitBtn = document.getElementById('clarificationSubmitButton');
 
+    function hideAllPregnantSections() {
+        [step1Section, loadingSection, clarificationSection, recommendedSection, letterDetailSection]
+            .forEach(section => section?.classList.add('hidden'));
+    }
+
+    function restorePregnantStep(session) {
+        if (!step1Section) return;
+
+        hideAllPregnantSections();
+        const step = session.currentStep || 'INPUT';
+
+        if (step === 'ANALYZING') {
+            loadingSection?.classList.remove('hidden');
+        } else if (step === 'CLARIFICATION') {
+            if (clarificationQuestionElem) {
+                clarificationQuestionElem.textContent = session.clarifyingQuestion || '';
+            }
+            clarificationSection?.classList.remove('hidden');
+        } else if (step === 'RECOMMENDED') {
+            recommendedSection?.classList.remove('hidden');
+        } else if (step === 'LETTER' || step === 'WAITING_FOR_MENTOR' || step === 'MENTOR_RESULT') {
+            letterDetailSection?.classList.remove('hidden');
+        } else if (step === 'FEEDBACK_COMPLETE') {
+            letterDetailSection?.classList.remove('hidden');
+            thankCompleteMsg?.classList.remove('hidden');
+        } else {
+            step1Section?.classList.remove('hidden');
+        }
+    }
+
+    restorePregnantStep(loadSession());
     async function handleConcernAnalysis(content, history) {
         if (step1Section) step1Section.classList.add('hidden');
         if (clarificationSection) clarificationSection.classList.add('hidden');
         if (loadingSection) loadingSection.classList.remove('hidden');
 
         try {
-            updateSession({ concernText: content, clarificationHistory: history });
+            updateSession({ concernText: content, clarificationHistory: history, currentStep: 'ANALYZING' });
             
             const concernResult = await analyzeConcern({ text: content, history: history });
 
@@ -413,6 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { route, analysis, clarifyingQuestion, response } = concernResult.data;
 
                 if (route === 'CLARIFICATION') {
+                    updateSession({ currentStep: 'CLARIFICATION', clarifyingQuestion: clarifyingQuestion || '' });
                     if (loadingSection) loadingSection.classList.add('hidden');
                     if (clarificationQuestionElem) clarificationQuestionElem.innerText = clarifyingQuestion || '구체적인 고민 내용을 조금 더 들려주시겠어요?';
                     if (clarificationInput) clarificationInput.value = '';
@@ -429,6 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (matchResult && matchResult.ok) {
                         if (!matchResult.data.selected) {
+                            updateSession({ currentStep: 'INPUT' });
                             alert("죄송합니다, 현재 고민과 연결할 수 있는 적절한 경험을 찾지 못했습니다. 고민 내용을 조금 더 자세하게 작성해 주시면 더 좋은 경험을 찾을 수 있습니다.");
                             if (loadingSection) loadingSection.classList.add('hidden');
                             if (step1Section) step1Section.classList.remove('hidden');
@@ -437,17 +527,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
-                        updateSession({ match: matchResult.data, mentorQuestion: matchResult.data.mentorQuestion });
+                        updateSession({ match: matchResult.data, mentorQuestion: matchResult.data.mentorQuestion, currentStep: 'RECOMMENDED' });
                         renderMatch(matchResult.data);
                         const selected = matchResult.data.selected;
-
-                        if (!selected.letter) {
-                            setText('receivedLetterText', '선택된 어르신에게 경험을 요청했습니다. 답변이 도착하면 이곳에서 편지를 확인할 수 있습니다.');
-                        }
 
                         if (recommendedSection) recommendedSection.classList.remove('hidden');
                     } else {
                         alert('경험 추천을 불러오지 못했습니다.');
+                        updateSession({ currentStep: 'INPUT' });
                         if (loadingSection) loadingSection.classList.add('hidden');
                         if (step1Section) step1Section.classList.remove('hidden');
                         if (pregnancyInput) pregnancyInput.disabled = false;
@@ -456,6 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     if (loadingSection) loadingSection.classList.add('hidden');
                     alert(response || '입력하신 내용은 서비스 제공 범위를 벗어났습니다.');
+                    updateSession({ currentStep: 'INPUT' });
                     if (step1Section) step1Section.classList.remove('hidden');
                     if (pregnancyInput) pregnancyInput.disabled = false;
                     if(submitBtn) submitBtn.disabled = false;
@@ -463,12 +551,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (loadingSection) loadingSection.classList.add('hidden');
                 alert(concernResult?.error?.message || '고민 분석 중 오류가 발생했습니다.');
+                updateSession({ currentStep: 'INPUT' });
                 if (step1Section) step1Section.classList.remove('hidden');
                 if (pregnancyInput) pregnancyInput.disabled = false;
                 if(submitBtn) submitBtn.disabled = false;
             }
         } catch (err) {
-            console.error("고민 처리 오류:", err);
+            console.error('고민 처리 오류:', err);
+            updateSession({ currentStep: 'INPUT' });
             if (loadingSection) loadingSection.classList.add('hidden');
             if (step1Section) step1Section.classList.remove('hidden');
             if (pregnancyInput) pregnancyInput.disabled = false;
@@ -519,6 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         viewLetterBtn.addEventListener('click', () => {
             if (recommendedSection) recommendedSection.classList.add('hidden');
             if (letterDetailSection) letterDetailSection.classList.remove('hidden');
+            updateSession({ currentStep: 'WAITING_FOR_MENTOR' });
         });
     }
 
@@ -545,6 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 match: null,
                 mentorQuestion: '',
                 feedback: null,
+                currentStep: 'INPUT',
+                clarifyingQuestion: '',
             });
         });
     }
@@ -567,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(feedbackResult?.error?.message || '감사 메시지를 만들지 못했습니다.');
                 }
 
-                updateSession({ feedback: feedbackResult.data });
+                updateSession({ feedback: feedbackResult.data, currentStep: 'FEEDBACK_COMPLETE' });
                 localStorage.setItem('userThankReactionText', thankText);
                 renderFeedback(feedbackResult.data);
                 if (thankCompleteMsg) thankCompleteMsg.classList.remove('hidden');
@@ -599,10 +692,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const sessionData = loadSession();
     const mentorQuestionText = document.getElementById('mentorQuestionText');
-    if (mentorQuestionText && sessionData.match?.mentorQuestion) {
-        mentorQuestionText.innerText = `"${sessionData.match.mentorQuestion}"`;
+    const mentorEmptyState = document.getElementById('mentor-empty-state');
+    const mentorQuestion = sessionData.match?.mentorQuestion || '';
+    if (mentorQuestionText) {
+        mentorQuestionText.textContent = mentorQuestion ? `"${mentorQuestion}"` : '';
+        mentorQuestionText.classList.toggle('hidden', !mentorQuestion);
+    }
+    if (mentorEmptyState) mentorEmptyState.classList.toggle('hidden', Boolean(mentorQuestion));
+
+    function restoreSeniorStep(session) {
+        if (!questionSection) return;
+
+        const hasMentorResult =
+            (session.currentStep === 'MENTOR_RESULT' || session.currentStep === 'FEEDBACK_COMPLETE') &&
+            Boolean(session.mentorResult);
+
+        questionSection.classList.toggle('hidden', hasMentorResult);
+        recordSection?.classList.toggle('hidden', hasMentorResult);
+        thankYouSection?.classList.toggle('hidden', !hasMentorResult);
     }
 
+    restoreSeniorStep(sessionData);
     let isRecording = false;
     let stopRecording = null;
 
@@ -683,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (mentorResult && mentorResult.ok) {
-                    updateSession({ mentorResult: mentorResult.data });
+                    updateSession({ mentorResult: mentorResult.data, currentStep: 'MENTOR_RESULT' });
                     renderMentorResult(mentorResult.data);
 
                     if (questionSection) questionSection.classList.add('hidden');
@@ -708,6 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (thankYouSection) thankYouSection.classList.add('hidden');
             if (questionSection) questionSection.classList.remove('hidden');
             if (recordSection) recordSection.classList.remove('hidden');
+            updateSession({ currentStep: 'WAITING_FOR_MENTOR' });
         });
     }
 

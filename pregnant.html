@@ -55,30 +55,11 @@
         <!-- 2-C단계: 추천 경험 카드 목록 -->
         <section id="recommended-card-section" class="card-box hidden">
             <h2>고민과 관련된 지혜로운 경험들</h2>
-            <div id="issue-tags" class="tag-group">
-                <span class="tag">#첫출산</span>
-                <span class="tag">#출산두려움</span>
-                <span class="tag">#독박육아</span>
-            </div>
+            <div id="issue-tags" class="tag-group"></div>
 
             <!-- B용 분석결과 덧붙임 -->
-            <div id="analysisSection" style="display:none;">
-                <p id="analysisSummary"></p>
-                <div id="analysisConcerns"></div>
-                <div id="analysisEmotions"></div>
-                <div id="analysisNeeds"></div>
-                <div id="analysisTags"></div>
-            </div>
 
-            <div class="experience-card-list">
-                <div class="experience-card">
-                    <div class="mentor-info">
-                        <strong>김정희 멘토</strong> <span class="age">(72세)</span>
-                    </div>
-                    <p class="summary">"첫아이를 낳았을 때 남편이 늦게 들어와 너무 무서웠지만..."</p>
-                    <button class="button secondary-btn view-letter-btn">이 어르신의 경험 편지 읽기</button>
-                </div>
-            </div>
+            <div id="experience-card-list" class="experience-card-list"></div>
         </section>
 
         <!-- 3단계 & 4단계: 편지 읽기 & 감사 전달 -->
@@ -86,41 +67,15 @@
             <button id="reset-btn" class="button back-btn">✏️ 다른 고민 다시 적기</button>
 
             <!-- B용 매칭 결과 덧붙임 -->
-            <div id="matchSection" style="display:none;">
-                <p id="mentorName"></p>
-                <p id="experienceTitle"></p>
-                <p id="matchScore"></p>
-                <p id="matchReason"></p>
-                <ul id="matchEvidence"></ul>
-                <p id="matchLimitation"></p>
-                <p id="mentorQuestionPreview"></p>
-            </div>
 
-            <div class="mentor-header">
-                <h2>김정희 멘토님 <span class="age">(72세)</span>의 경험 편지</h2>
-                <div class="tag-group">
-                    <span class="tag">#첫출산</span>
-                    <span class="tag">#독박육아</span>
-                </div>
-            </div>
+            <div class="mentor-header"><h2 id="letter-mentor-title"></h2><div id="letter-tags" class="tag-group"></div></div>
 
-            <div class="audio-container">
-                <p class="audio-label">🎧 어르신 원본 음성 들으시려면 재생 버튼을 누르세요</p>
-                <audio id="audio-player" controls>
-                    <source src="" type="audio/mpeg">
-                </audio>
-            </div>
-
+            <div id="letter-audio-container" class="audio-container hidden"><audio id="audio-player" controls></audio></div>
             <div id="receivedLetterSection" style="width:100%">
-                <div id="ai-letter-content" class="letter-box">
-                    <p id="receivedLetterText">저도 처음 첫아이를 품에 안았을 때는 세상에 혼자 남겨진 것처럼 두렵고 무서웠답니다.</p>
-                </div>
+                <div id="ai-letter-content" class="letter-box"><p id="receivedLetterText"></p></div>
 
                 <div id="safety-notice-box" class="notice-box">
-                    <div id="receivedSafetyNotice">
-                        <p class="notice-edit">💡 <strong>AI 정련 내역:</strong> 어르신의 구어체 표현 중 반복되는 문장을 정리하고 문맥을 읽기 쉽게 다듬었습니다.</p>
-                        <p class="notice-warning">※ 본 답변은 개인의 경험이며, 의학적 판단이 필요한 경우 전문 의료기관 상담을 권장합니다.</p>
-                    </div>
+                    <div id="receivedSafetyNotice"></div>
                 </div>
 
                 <hr class="divider">

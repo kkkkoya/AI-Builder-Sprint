@@ -12,6 +12,8 @@ const DEFAULT_SESSION = {
   mentorResult: null,
   feedback: null,
   audioUrl: "", // 녹음된 음성 파일 URL
+  currentStep: "INPUT",
+  clarifyingQuestion: "",
   updatedAt: ""
 };
 
