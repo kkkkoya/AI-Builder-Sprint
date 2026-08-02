@@ -65,6 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     mypageSttText.textContent = `"${savedSeniorText}"`;
                 }
             }
+        } else {
+            // 👇 로그아웃 상태일 때 초기 모드 선택 화면을 강제로 복구!
+            if (modeSelectStep) modeSelectStep.classList.remove('hidden');
+            if (pregnantInfoStep) pregnantInfoStep.classList.add('hidden');
+            if (seniorInfoStep) seniorInfoStep.classList.add('hidden');
+            if (mainHeroStep) mainHeroStep.classList.add('hidden');
+            if (mainProfileBtn) mainProfileBtn.classList.add('hidden');
         }
     }
 
@@ -83,13 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const chipBtns = document.querySelectorAll('.chip-btn');
     chipBtns.forEach(chip => chip.addEventListener('click', () => chip.classList.toggle('active')));
 
-    // 임산부 인적사항 작성 완료 (isRegistered 저장!)
+    // 임산부 인적사항 작성 완료 
     if (startPregnantBtn) {
         startPregnantBtn.addEventListener('click', () => {
             const name = document.getElementById('preg-name').value.trim() || '지혜맘';
             const status = document.getElementById('preg-status').value;
 
-            localStorage.setItem('isRegistered', 'true'); // ✨ 등록 완료 상태 저장
+            localStorage.setItem('isRegistered', 'true'); 
             localStorage.setItem('userName', name);
             localStorage.setItem('userStatus', status);
             localStorage.setItem('userRole', 'pregnant');
@@ -103,13 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 어르신 인적사항 작성 완료 (isRegistered 저장!)
+    // 어르신 인적사항 작성 완료 
     if (startSeniorBtn) {
         startSeniorBtn.addEventListener('click', () => {
             const name = document.getElementById('senior-name').value.trim() || '김정희';
             const age = document.getElementById('senior-age').value.trim() || '72';
 
-            localStorage.setItem('isRegistered', 'true'); // ✨ 등록 완료 상태 저장
+            localStorage.setItem('isRegistered', 'true'); 
             localStorage.setItem('seniorName', name);
             localStorage.setItem('seniorAge', age);
             localStorage.setItem('userRole', 'senior');
@@ -153,10 +160,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pregnantHistoryView) pregnantHistoryView.classList.remove('hidden');
             if (seniorHistoryView) seniorHistoryView.classList.add('hidden');
 
-            const savedReaction = localStorage.getItem('userThankReactionText');
-            const reactionDisplay = document.getElementById('senior-received-reaction');
-            if (reactionDisplay && savedReaction) {
-                reactionDisplay.textContent = `"${savedReaction}"`;
+            // 💡 [임산부 시나리오] 고민 작성 여부에 따른 빈 화면 vs 매칭 화면 제어
+            const userConcern = localStorage.getItem('userPregnancyInput');
+            const emptyState = document.getElementById('pregnant-empty-state');
+            const historyItem = document.getElementById('pregnant-history-item');
+            const concernText = document.getElementById('mypage-user-concern');
+
+            if (!userConcern) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (historyItem) historyItem.classList.add('hidden');
+            } else {
+                if (emptyState) emptyState.classList.add('hidden');
+                if (historyItem) historyItem.classList.remove('hidden');
+                if (concernText) concernText.textContent = `"${userConcern}"`;
             }
 
         } else if (userRole === 'senior') {
@@ -169,6 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (seniorHistoryView) seniorHistoryView.classList.remove('hidden');
             if (pregnantHistoryView) pregnantHistoryView.classList.add('hidden');
+
+            // 💡 [어르신 시나리오] 녹음 여부에 따른 빈 화면 vs 기록 화면 제어
+            const savedSeniorText = localStorage.getItem('seniorRecordText');
+            const emptyState = document.getElementById('senior-empty-state');
+            const historyItem = document.getElementById('senior-history-item');
+            const mypageSttText = document.getElementById('mypage-stt-text');
+            const answeredSummary = document.getElementById('mypage-answered-summary');
+            
+            if (!savedSeniorText) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (historyItem) historyItem.classList.add('hidden');
+            } else {
+                if (emptyState) emptyState.classList.add('hidden');
+                if (historyItem) historyItem.classList.remove('hidden');
+                if (mypageSttText) mypageSttText.textContent = `"${savedSeniorText}"`;
+                
+                const currentConcern = localStorage.getItem('userPregnancyInput') || "처음 엄마가 되었을 때의 두려움과 막막함";
+                if (answeredSummary) answeredSummary.textContent = `"${currentConcern.substring(0, 20)}..."`;
+            }
         }
     }
 
@@ -176,11 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
         mypageBackBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
 
-    // 🚪 로그아웃 버튼을 누르면 등록 정보가 싹 지워져서 초기 선택 화면으로 이동!
+    // 🚪 로그아웃 버튼 이벤트가 정상적으로 들어간 곳!
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             localStorage.clear();
-            window.location.href = 'index.html';
+            window.location.replace('index.html'); 
         });
     }
 
@@ -252,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ✨ 처음으로 돌아가기 클릭 시 index.html로 이동 (isRegistered가 켜져 있어서 메인 바로가기 화면으로 감!)
     if (pregnantHomeCompleteBtn) {
         pregnantHomeCompleteBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
@@ -295,12 +329,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sendExperienceBtn) {
         sendExperienceBtn.addEventListener('click', () => {
-            
             const transcriptInput = document.getElementById('transcriptInput');
             if (transcriptInput) {
                 localStorage.setItem('seniorRecordText', transcriptInput.value);
             }
-
             questionSection.classList.add('hidden');
             recordSection.classList.add('hidden');
             thankYouSection.classList.remove('hidden');
@@ -318,20 +350,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ✨ 처음으로 돌아가기 클릭 시 index.html로 이동 (isRegistered가 켜져 있어서 메인 바로가기 화면으로 감!)
     if (seniorHomeCompleteBtn) {
         seniorHomeCompleteBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
-});
 
-// --- 이 부분을 JS 파일 아무 곳에나 추가해 주세요 ---
+    /* ==========================================
+       추가: 어르신 모드 메인 진입 시 '초기 더미 고민' 주입 로직
+       ========================================== */
+    const mentorQuestionText = document.getElementById('mentorQuestionText');
+    if (mentorQuestionText) {
+        const userConcern = localStorage.getItem('userPregnancyInput');
+        if (userConcern) {
+            mentorQuestionText.textContent = `"${userConcern}"`;
+        } else {
+            mentorQuestionText.innerHTML = `"첫 아이를 가지게 되어 기쁘지만, 출산 시 통증과 엄마가 될 준비가 되었는지 너무 두렵고 막막합니다."<br><span style="font-size: 14px; color: #666; font-weight: normal; display: block; margin-top: 10px;">(💡 시스템 추천 고민)</span>`;
+        }
+    }
 
-// 1. 알림창 띄우기 함수
+    // 알림창 닫기 버튼 이벤트 연결
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            document.getElementById('customAlertModal').style.display = 'none';
+        });
+    }
+
+}); // DOMContentLoaded 괄호 닫힘 (전체 로직을 감싸는 역할)
+
+// 1. 알림창 띄우기 함수 (이벤트 리스너 밖에서 선언해야 HTML에서 호출 가능)
 function showCustomAlert() {
     document.getElementById('customAlertModal').style.display = 'flex';
 }
-
-// 2. 확인(닫기) 버튼 클릭 시 알림창 숨기기
-document.getElementById('closeModalBtn').addEventListener('click', function() {
-    document.getElementById('customAlertModal').style.display = 'none';
-});

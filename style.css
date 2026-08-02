@@ -249,11 +249,6 @@ audio { width: 100%; height: 36px; }
     /* 스플래시 화면에 더 어울리는 추가 스타일 (예: 더 부드러운 애니메이션) */
 }
 
-/* 🖼️ 화면 전환용 로고를 감싸는 컨테이너 */
-.splash-logo-container-transition {
-    /* 기존 스타일 그대로 유지하거나, 필요에 따라 추가 */
-}
-
 /* 🖼️ 기본 화면의 이어봄 로고 (헤더 등) - 기존 style.css의 .brand-logo 스타일을 이 클래스로 이동 */
 .brand-logo-content {
     height: 50px; /* 기존 130px은 헤더용으로 너무 커서 비율이 어긋날 수 있으므로 축소[cite: 5] */
@@ -292,10 +287,6 @@ audio { width: 100%; height: 36px; }
     margin-top: 10px;
 }
 
-/* 🖼️ 기본 화면의 아이콘 (아기 아이콘, 마이크 아이콘) */
-.icon-large-content, .icon-mic-content {
-    /* 기존 관련 스타일 이동 및 필요에 따라 추가 */
-}
 /* 💌 어르신 마이페이지: 산모의 반응 박스 스타일 */
 .received-reaction-box {
     background-color: #fff3e0;
@@ -320,10 +311,6 @@ audio { width: 100%; height: 36px; }
 
 .info-textarea {
     margin-bottom: 24px; /* 텍스트 입력창과 버튼 사이 간격 */
-}
-
-#submit-question-btn {
-
 }
 
 /* 알림창 배경 (어둡게) */
@@ -432,4 +419,24 @@ audio { width: 100%; height: 36px; }
     font-family: 'Gowun Dodum', 'Malgun Gothic', sans-serif;
     color: var(--text-main);
     
+}
+
+/* 빈 화면 (Empty State) 스타일 */
+.empty-state {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 1px dashed #cccccc;
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    color: #555555;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+.empty-sub {
+    display: block;
+    font-size: 13px;
+    font-weight: normal;
+    color: #888888;
+    margin-top: 8px;
 }
