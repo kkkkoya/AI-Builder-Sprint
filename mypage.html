@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+</head>
+<body class="fade-in">
+
+    <!-- 📱 스플래시 스크린 -->
+    <div id="splash-screen" class="hidden">
+        <!-- index.html과 동일한 이미지 기반 스플래시로 업데이트 -->
+        <div class="splash-logo-container-transition">
+            <!-- 화면 전환 시 그림: 크기 확대를 위해 클래스 변경 -->
+            <img class="brand-logo-transition" src="eobom.png">
+        </div>
+    </div>
+
+    <!-- 📱 마이페이지 전용 전체 상단 헤더 (화면 위 양 옆 고정) -->
+    <header class="global-top-header">
+        <button id="mypage-back-btn" class="button header-close-btn">< 닫기</button>
+        <div>
+            <!-- 기본 화면 로고: 크기 조정을 위해 클래스 변경 (텍스트 대신 이미지 사용) -->
+            <img class="brand-logo-content" src="eobom(nowriting).png">
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="card-box mypage-card">
+            <!-- 사용자 인적사항 요약 카드 -->
+            <div class="profile-info-header">
+                <!-- 기본 화면 아바타: 크기 조정을 위해 클래스 변경 -->
+                <span id="profile-user-avatar" class="avatar-large-content">👤</span>
+                <h2 id="profile-user-name">사용자 이름</h2>
+                <p id="profile-user-detail" class="mypage-sub">인적사항 정보가 들어갑니다.</p>
+            </div>
+
+            <hr class="divider">
+
+            <!-- 활동 기록 영역 -->
+            <div id="history-scroll-container" class="history-scroll-box">
+                <!-- 🤰 임산부 모드 히스토리 -->
+                <div id="pregnant-history-view" class="history-list hidden">
+                    <h3>💌 남긴 고민 & 어르신의 답변 기록</h3>
+                    
+                    <div class="history-item">
+                        <div class="item-header">
+                            <span class="item-tag">#첫출산 #출산두려움</span>
+                            <span class="item-date">2026.07.30</span>
+                        </div>
+                        <p class="item-content">
+                            "첫 아이를 가지게 되어 너무 기쁘지만, 한편으로는 출산 시 통증과 엄마가 될 준비가 되어있는지 너무 두렵고 막막합니다."
+                        </p>
+
+                        <div class="matched-answer-box">
+                            <p class="mentor-label">👵 김정희 멘토님 (72세)의 답변</p>
+                            <div class="audio-container">
+                                <p class="audio-label">🎧 원본 음성 답변</p>
+                                <audio controls>
+                                    <source src="" type="audio/mpeg">
+                                </audio>
+                            </div>
+                            <div class="answer-content-box">
+                                <p class="answer-title">✉️ 편지로 정리된 답변</p>
+                                <p class="answer-text">
+                                    "첫애를 가졌을 때 나도 참 무서웠단다. 밤마다 눈물이 나기도 했지만 아기 얼굴을 보고 함께 시간을 보내다 보니 자연스럽게 엄마가 되더라고. 너무 걱정하지 마렴, 당신은 충분히 잘해낼 거야."
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 👵 어르신 모드 히스토리 -->
+                <div id="senior-history-view" class="history-list hidden">
+                    <h3>🎙️ 내가 들려준 지혜 기록</h3>
+
+                    <div class="history-item">
+                        <div class="item-header">
+                            <span class="item-tag">#첫출산응원</span>
+                            <span class="item-date">2026.07.30</span>
+                        </div>
+                        <div class="summary-box">
+                            <strong>💡 답변한 고민 요약:</strong> "처음 엄마가 되었을 때의 두려움과 막막함"
+                        </div>
+                        <div class="audio-container">
+                            <p class="audio-label">🎧 내가 남긴 녹음본</p>
+                            <audio controls>
+                                <source src="" type="audio/mpeg">
+                            </audio>
+                        </div>
+                        <div class="stt-content-box">
+                            <p class="stt-title">🗣️ 녹음 텍스트:</p>
+                            <p class="stt-text">
+                                "첫애를 가졌을 때 나도 참 무서웠지. 남편은 일하느라 바쁘고 혼자 밤에 울기도 많이 울었어. 그래도 아이 얼굴 보면 힘이 생기더라고..."
+                            </p>
+                        </div>
+
+                        <div class="received-reaction-box">
+                            <p class="reaction-title">💌 산모님이 남긴 감사 인사</p>
+                            <p class="reaction-text" id="senior-received-reaction">아직 반응이 도착하지 않았어요.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- 최하단 로그아웃 버튼 -->
+            <button id="logout-btn" class="button auth-btn logout-style mypage-logout-btn">로그아웃</button>
+        </div>
+    </main>
+
+<script type="module" src="ui.js"></script></body>
+</html>

@@ -88,6 +88,28 @@ test("Solar가 전달받지 않은 경험 ID를 반환하면 선택을 거부한
   assert.equal(validated.selected, null);
 });
 
+test("최종 선택 뒤에는 실제 아카이브 원문과 편지를 복원한다", () => {
+  const allowedCandidates = prepareExperienceArchiveForAi(analysis, archive);
+  const selectedCandidate = allowedCandidates[0];
+  const validated = validateAiMatchResult(
+    {
+      selected: {
+        mentorId: selectedCandidate.mentorId,
+        experienceId: selectedCandidate.experienceId,
+        totalScore: 80,
+      },
+      alternatives: [],
+      mentorQuestion: "경험을 들려주세요.",
+    },
+    archive,
+    allowedCandidates
+  );
+
+  assert.ok(validated.selected.transcript);
+  assert.ok(validated.selected.letter);
+  assert.equal(validated.selected.experienceTitle, selectedCandidate.title);
+});
+
 test("fallback도 최신 계약과 같이 최종 경험 한 개만 반환한다", () => {
   const fallback = createFallbackMatchResult(analysis, archive);
 

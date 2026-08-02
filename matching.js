@@ -510,6 +510,15 @@ export function flattenExperienceArchive(
             experience.letter
           ),
 
+          edits: cleanStringArray(
+            experience.edits,
+            10
+          ),
+
+          audioUrl: cleanText(
+            experience.audioUrl
+          ),
+
           tags: normalizeTags(
             experience.tags ?? []
           ),
@@ -1191,11 +1200,47 @@ function validateMatchCandidate(
     mentorName:
       realExperience.mentorName,
 
+    mentorAge:
+      realExperience.mentorAge,
+
+    mentorRegion:
+      realExperience.mentorRegion,
+
+    mentorIntro:
+      realExperience.mentorIntro,
+
     experienceId:
       realExperience.experienceId,
 
     experienceTitle:
       realExperience.title,
+
+    summary:
+      realExperience.summary,
+
+    transcript:
+      realExperience.transcript,
+
+    letter:
+      realExperience.letter,
+
+    tags:
+      realExperience.tags,
+
+    emotions:
+      realExperience.emotions,
+
+    helpTypes:
+      realExperience.helpTypes,
+
+    edits:
+      realExperience.edits,
+
+    safety:
+      realExperience.safety,
+
+    audioUrl:
+      realExperience.audioUrl,
 
     totalScore: cleanScore(
       candidate.totalScore ??
