@@ -185,11 +185,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function requestRequiredField(message, input) {
+        alert(message);
+        input?.focus();
+    }
+
+    function isValidAge(value) {
+        const age = Number(value);
+        return Number.isInteger(age) && age >= 1 && age <= 120;
+    }
+
     function checkRegistrationStatus() {
         const isRegistered = localStorage.getItem('isRegistered') === 'true';
         const userRole = localStorage.getItem('userRole');
 
-        if (isRegistered && mainHeroStep) {
+        const hasRequiredProfile = userRole === 'pregnant'
+            ? Boolean(localStorage.getItem('userName')?.trim() && localStorage.getItem('userStatus')?.trim())
+            : userRole === 'senior'
+                ? Boolean(localStorage.getItem('seniorName')?.trim() && isValidAge(localStorage.getItem('seniorAge')))
+                : false;
+
+        if (isRegistered && !hasRequiredProfile) {
+            localStorage.removeItem('isRegistered');
+            return;
+        }
+
+        if (isRegistered && hasRequiredProfile && mainHeroStep) {
             if (modeSelectStep) modeSelectStep.classList.add('hidden');
             if (pregnantInfoStep) pregnantInfoStep.classList.add('hidden');
             if (seniorInfoStep) seniorInfoStep.classList.add('hidden');
@@ -230,8 +251,18 @@ document.addEventListener('DOMContentLoaded', () => {
         startPregnantBtn.addEventListener('click', () => {
             const nameInput = document.getElementById('preg-name');
             const statusInput = document.getElementById('preg-status');
-            const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '지혜맘';
-            const status = statusInput ? statusInput.value : '임신 초기 (1~12주)';
+            const name = nameInput?.value.trim() || '';
+            const status = statusInput?.value.trim() || '';
+
+            if (!name) {
+                requestRequiredField('이름 또는 닉네임을 입력해 주세요.', nameInput);
+                return;
+            }
+
+            if (!status) {
+                requestRequiredField('현재 임신 주기를 선택해 주세요.', statusInput);
+                return;
+            }
 
             localStorage.setItem('isRegistered', 'true');
             localStorage.setItem('userName', name);
@@ -252,8 +283,23 @@ document.addEventListener('DOMContentLoaded', () => {
         startSeniorBtn.addEventListener('click', () => {
             const nameInput = document.getElementById('senior-name');
             const ageInput = document.getElementById('senior-age');
-            const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '어르신';
-            const age = (ageInput && ageInput.value.trim()) ? ageInput.value.trim() : '';
+            const name = nameInput?.value.trim() || '';
+            const age = ageInput?.value.trim() || '';
+
+            if (!name) {
+                requestRequiredField('성함을 입력해 주세요.', nameInput);
+                return;
+            }
+
+            if (!age) {
+                requestRequiredField('나이를 입력해 주세요.', ageInput);
+                return;
+            }
+
+            if (!isValidAge(age)) {
+                requestRequiredField('나이는 1세부터 120세 사이의 정수로 입력해 주세요.', ageInput);
+                return;
+            }
 
             localStorage.setItem('isRegistered', 'true');
             localStorage.setItem('seniorName', name);

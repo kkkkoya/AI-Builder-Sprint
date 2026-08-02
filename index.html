@@ -59,10 +59,11 @@
 
             <div class="input-form">
                 <label for="preg-name">이름 (또는 닉네임)</label>
-                <input type="text" id="preg-name" placeholder="예: 지혜맘" class="info-input">
+                <input type="text" id="preg-name" placeholder="예: 지혜맘" class="info-input" required>
 
                 <label for="preg-status">현재 상태</label>
-                <select id="preg-status" class="info-input">
+                <select id="preg-status" class="info-input" required>
+                    <option value="" selected disabled>임신 주기를 선택해 주세요</option>
                     <option value="임신 초기 (1~12주)">임신 초기 (1~12주)</option>
                     <option value="임신 중기 (13~27주)">임신 중기 (13~27주)</option>
                     <option value="임신 후기 (28주 이상)">임신 후기 (28주 이상)</option>
@@ -82,10 +83,10 @@
 
             <div class="input-form">
                 <label for="senior-name">성함</label>
-                <input type="text" id="senior-name" placeholder="예: 김정희" class="info-input">
+                <input type="text" id="senior-name" placeholder="예: 김정희" class="info-input" required>
 
                 <label for="senior-age">연령</label>
-                <input type="number" id="senior-age" placeholder="예: 72" class="info-input">
+                <input type="number" id="senior-age" placeholder="예: 72" class="info-input" min="1" max="120" step="1" required>
 
                 <label>나누고 싶은 경험 키워드 (선택)</label>
                 <div class="keyword-chip-group">
