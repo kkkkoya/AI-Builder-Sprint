@@ -54,32 +54,32 @@ const STANDARD_TAGS = [
 /*
  * action별 호출 설정이다.
  *
- * 매칭은 후보 3개의 짧은 요약만 비교하므로
- * 낮은 추론 강도와 짧은 출력 제한을 사용한다.
+ * 매칭은 후보 3개의 짧은 요약만 비교한다.
+ * 빠른 기본 호출과 action별 JSON·출력 제한을 사용한다.
  */
 const ACTION_CONFIG = Object.freeze({
     "analyze-concern": {
-        reasoningEffort: "low",
-        timeoutMs: 15000,
-        maxTokens: 1000,
+        timeoutMs: 20000,
+        maxTokens: 1200,
+        jsonMode: false,
     },
 
     "match-experience": {
-        reasoningEffort: "low",
-        timeoutMs: 35000,
-        maxTokens: 600,
+        timeoutMs: 25000,
+        maxTokens: 900,
+        jsonMode: true,
     },
 
     "process-mentor-answer": {
-        reasoningEffort: "low",
-        timeoutMs: 20000,
-        maxTokens: 1400,
+        timeoutMs: 30000,
+        maxTokens: 1800,
+        jsonMode: true,
     },
 
     "create-impact-feedback": {
-        reasoningEffort: "low",
-        timeoutMs: 10000,
-        maxTokens: 350,
+        timeoutMs: 15000,
+        maxTokens: 500,
+        jsonMode: true,
     },
 });
 
@@ -1342,7 +1342,7 @@ function getUpstreamErrorMessage(
  * 선택적 매개변수가 거부됐을 때만
  * 기본 요청으로 한 번 재시도한다.
  */
-function shouldRetryWithBasicBody(
+function shouldRetryWithoutOptionalParameters(
     status,
     upstreamBody
 ) {
@@ -1358,10 +1358,10 @@ function shouldRetryWithBasicBody(
 
     return (
         message.includes(
-            "reasoning_effort"
+            "response_format"
         ) ||
         message.includes(
-            "reasoning effort"
+            "response format"
         ) ||
         message.includes(
             "max_tokens"
@@ -1373,6 +1373,24 @@ function shouldRetryWithBasicBody(
             "unsupported parameter"
         )
     );
+}
+
+function isTransientUpstreamStatus(status) {
+    return (
+        status === 408 ||
+        status === 409 ||
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504
+    );
+}
+
+function waitForRetry(milliseconds) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, milliseconds);
+    });
 }
 
 async function callSolar(
@@ -1402,10 +1420,10 @@ async function callSolar(
      */
     async function requestOnce(
         useOptionalParameters,
-        forceJson
+        useJsonResponseFormat
     ) {
         const attemptTimeoutMs =
-            forceJson
+            useJsonResponseFormat
                 ? Math.max(
                     timeoutMs,
                     20000
@@ -1427,23 +1445,13 @@ async function callSolar(
                 stream: false,
             };
 
-            if (forceJson) {
+            if (useJsonResponseFormat) {
                 requestBody.response_format = {
                     type: "json_object",
                 };
             }
 
             if (useOptionalParameters) {
-                const reasoningEffort =
-                    cleanText(
-                        config?.reasoningEffort
-                    );
-
-                if (reasoningEffort) {
-                    requestBody.reasoning_effort =
-                        reasoningEffort;
-                }
-
                 const maxTokens =
                     cleanInteger(
                         config?.maxTokens,
@@ -1496,35 +1504,92 @@ async function callSolar(
     }
 
     async function requestWithCompatibilityRetry(
-        forceJson
+        useJsonResponseFormat
     ) {
+        let usedBasicBody = false;
+
         let result =
             await requestOnce(
                 true,
-                forceJson
+                useJsonResponseFormat
             );
 
         if (
             !result.upstreamResponse.ok &&
-            shouldRetryWithBasicBody(
+            shouldRetryWithoutOptionalParameters(
                 result.upstreamResponse.status,
                 result.upstreamBody
             )
         ) {
+            usedBasicBody = true;
+
             result =
                 await requestOnce(
                     false,
-                    forceJson
+                    false
                 );
         }
 
+        /*
+         * 일시적인 제한 또는 Upstage 서버 오류는
+         * 짧게 기다린 뒤 한 번만 다시 요청한다.
+         */
+        if (
+            !result.upstreamResponse.ok &&
+            isTransientUpstreamStatus(
+                result.upstreamResponse.status
+            )
+        ) {
+            const retryAfterValue =
+                result.upstreamResponse.headers
+                    ?.get?.("retry-after");
+
+            const retryAfterSeconds =
+                retryAfterValue
+                    ? Number(retryAfterValue)
+                    : Number.NaN;
+
+            const retryDelayMs = Number.isFinite(
+                retryAfterSeconds
+            )
+                ? Math.max(
+                    250,
+                    Math.min(
+                        2000,
+                        retryAfterSeconds * 1000
+                    )
+                )
+                : 500;
+
+            await waitForRetry(retryDelayMs);
+
+            result = await requestOnce(
+                !usedBasicBody,
+                usedBasicBody
+                    ? false
+                    : useJsonResponseFormat
+            );
+        }
+
         if (!result.upstreamResponse.ok) {
-            throw new Error(
+            const upstreamError = new Error(
                 getUpstreamErrorMessage(
                     result.upstreamBody,
                     result.upstreamResponse.status
                 )
             );
+
+            upstreamError.code =
+                result.upstreamResponse.status === 429
+                    ? "SOLAR_RATE_LIMITED"
+                    : "SOLAR_UPSTREAM_ERROR";
+
+            upstreamError.statusCode =
+                result.upstreamResponse.status === 429
+                    ? 503
+                    : 502;
+
+            throw upstreamError;
         }
 
         const content =
@@ -1545,12 +1610,15 @@ async function callSolar(
     }
 
     try {
+        const preferJsonResponse =
+            config?.jsonMode === true;
+
         /*
          * 먼저 빠른 일반 요청을 보낸다.
          */
         const fastContent =
             await requestWithCompatibilityRetry(
-                false
+                preferJsonResponse
             );
 
         try {
@@ -1558,6 +1626,12 @@ async function callSolar(
                 fastContent
             );
         } catch {
+            if (preferJsonResponse) {
+                throw new Error(
+                    "Solar가 JSON 모드에서도 올바른 JSON을 반환하지 않았습니다."
+                );
+            }
+
             /*
              * JSON 형식이 잘못된 경우에만
              * 새 타이머로 JSON 요청을 다시 보낸다.
@@ -1593,6 +1667,74 @@ async function callSolar(
 
         throw error;
     }
+}
+
+function validateSolarResult(
+    action,
+    result
+) {
+    if (!result || typeof result !== "object") {
+        return false;
+    }
+
+    if (action === "analyze-concern") {
+        const validRoutes = [
+            "IN_SCOPE",
+            "CLARIFICATION",
+            "NO_MATCH",
+            "SAFETY",
+        ];
+
+        if (!validRoutes.includes(result.route)) {
+            return false;
+        }
+
+        if (
+            result.route === "IN_SCOPE" &&
+            (!result.analysis ||
+                typeof result.analysis !== "object" ||
+                !cleanText(result.analysis.summary))
+        ) {
+            return false;
+        }
+
+        if (
+            result.route === "CLARIFICATION" &&
+            !cleanText(result.clarifyingQuestion)
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    if (action === "match-experience") {
+        return Boolean(
+            result.selected &&
+            typeof result.selected === "object" &&
+            cleanText(result.selected.experienceId) &&
+            cleanText(result.mentorQuestion)
+        );
+    }
+
+    if (action === "process-mentor-answer") {
+        return Boolean(
+            result.experienceCard &&
+            typeof result.experienceCard === "object" &&
+            cleanText(result.experienceCard.summary) &&
+            cleanText(result.letter) &&
+            result.fidelity &&
+            typeof result.fidelity === "object" &&
+            result.safety &&
+            typeof result.safety === "object"
+        );
+    }
+
+    if (action === "create-impact-feedback") {
+        return Boolean(cleanText(result.message));
+    }
+
+    return false;
 }
 function createErrorBody(
     code,
@@ -1756,6 +1898,19 @@ export default async function handler(
                 )
                 : rawSolarResult;
 
+        if (!validateSolarResult(action, solarResult)) {
+            const validationError = new Error(
+                "Solar 응답이 필요한 결과 형식을 충족하지 못했습니다."
+            );
+
+            validationError.code =
+                "SOLAR_INVALID_RESPONSE";
+
+            validationError.statusCode = 502;
+
+            throw validationError;
+        }
+
         return sendJson(
             response,
             200,
@@ -1793,14 +1948,26 @@ export default async function handler(
             error?.code ===
             "SOLAR_TIMEOUT";
 
+        const statusCode = isTimeout
+            ? 504
+            : cleanInteger(
+                error?.statusCode,
+                400,
+                599,
+                500
+            );
+
         return sendJson(
             response,
-            isTimeout ? 504 : 500,
+            statusCode,
 
             createErrorBody(
                 isTimeout
                     ? "SOLAR_TIMEOUT"
-                    : "SOLAR_REQUEST_FAILED",
+                    : cleanText(
+                        error?.code,
+                        "SOLAR_REQUEST_FAILED"
+                    ),
 
                 error instanceof Error
                     ? error.message

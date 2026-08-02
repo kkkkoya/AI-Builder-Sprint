@@ -206,12 +206,41 @@ async function callSolarAction(
       responseBody?.message ??
       "Solar 요청에 실패했습니다.";
 
-    throw new Error(message);
+    const error = new Error(message);
+
+    error.code =
+      responseBody?.error?.code ??
+      "SOLAR_REQUEST_FAILED";
+
+    error.status = response.status;
+
+    throw error;
   }
 
   return (
     responseBody?.data ??
     responseBody
+  );
+}
+
+function logSolarFallback(
+  action,
+  error
+) {
+  console.warn(
+    `[이어봄 AI fallback] ${action}`,
+    {
+      code:
+        error?.code ??
+        "SOLAR_REQUEST_FAILED",
+      status:
+        error?.status ??
+        null,
+      message:
+        error instanceof Error
+          ? error.message
+          : "알 수 없는 Solar 오류",
+    }
   );
 }
 
@@ -859,7 +888,12 @@ export async function analyzeConcern(
 
         false
       );
-    } catch {
+    } catch (error) {
+      logSolarFallback(
+        API_ACTIONS.ANALYZE_CONCERN,
+        error
+      );
+
       const fallbackResult =
         createMockConcernAnalysis(
           text,
@@ -1012,7 +1046,12 @@ export async function matchExperience(
 
         false
       );
-    } catch {
+    } catch (error) {
+      logSolarFallback(
+        API_ACTIONS.MATCH_EXPERIENCE,
+        error
+      );
+
       /*
        * 시간 초과, 잘못된 JSON,
        * 후보 밖 ID 등의 경우
@@ -1153,7 +1192,12 @@ export async function processMentorAnswer(
 
         false
       );
-    } catch {
+    } catch (error) {
+      logSolarFallback(
+        API_ACTIONS.PROCESS_MENTOR_ANSWER,
+        error
+      );
+
       const fallbackResult =
         createMockMentorResult(
           transcript,
@@ -1251,7 +1295,12 @@ export async function createImpactFeedback(
 
         false
       );
-    } catch {
+    } catch (error) {
+      logSolarFallback(
+        API_ACTIONS.CREATE_IMPACT_FEEDBACK,
+        error
+      );
+
       const fallbackResult =
         createMockImpactResult(
           reaction,
