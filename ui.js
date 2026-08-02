@@ -42,10 +42,39 @@ import {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+    const LOGIN_SESSION_KEY = 'eobom_demo_login_active';
+    const LOGIN_STORAGE_KEYS = [
+        'isRegistered',
+        'userRole',
+        'userName',
+        'userStatus',
+        'pregnantUserId',
+        'seniorMentorId',
+        'seniorName',
+        'seniorAge',
+        'seniorExperienceTags',
+    ];
+
+    function clearLoginState({ clearScreen = false } = {}) {
+        LOGIN_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+        sessionStorage.removeItem(LOGIN_SESSION_KEY);
+        if (clearScreen) clearSession();
+    }
+
     try {
         initializeDemoDatabase(await loadMentorArchive());
     } catch (error) {
         console.error('로컬 멘토 계정을 준비하지 못했습니다.', error);
+    }
+
+    const hasActiveBrowserLogin = sessionStorage.getItem(LOGIN_SESSION_KEY) === 'true';
+    if (!hasActiveBrowserLogin) {
+        clearLoginState({ clearScreen: true });
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        if (['pregnant.html', 'senior.html', 'mypage.html'].includes(currentPage)) {
+            window.location.replace('index.html');
+            return;
+        }
     }
 
     function setText(id, value, fallback = '') {
@@ -365,6 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('userStatus', status);
             localStorage.setItem('userRole', 'pregnant');
             localStorage.setItem('pregnantUserId', pregnantUser.userId);
+            sessionStorage.setItem(LOGIN_SESSION_KEY, 'true');
 
             const heroTitle = document.getElementById('hero-title');
             if (heroTitle) heroTitle.innerHTML = `<strong>${name}님</strong>, 반갑습니다!<br>어르신의 지혜를 나눠드립니다.`;
@@ -420,6 +450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 JSON.stringify(selectedTags)
             );
             localStorage.setItem('userRole', 'senior');
+            sessionStorage.setItem(LOGIN_SESSION_KEY, 'true');
 
             const heroTitle = document.getElementById('hero-title');
             if (heroTitle) heroTitle.innerHTML = `<strong>${name} 멘토님(${age}세)</strong>,<br>소중한 지혜를 들려주세요.`;
@@ -823,18 +854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            [
-                'isRegistered',
-                'userRole',
-                'userName',
-                'userStatus',
-                'pregnantUserId',
-                'seniorMentorId',
-                'seniorName',
-                'seniorAge',
-                'seniorExperienceTags',
-            ].forEach(key => localStorage.removeItem(key));
-            clearSession();
+            clearLoginState({ clearScreen: true });
             window.location.href = 'index.html';
         });
     }

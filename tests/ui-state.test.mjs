@@ -18,6 +18,14 @@ test("로그아웃은 계정 정보만 지우고 질문 세션은 보존한다",
   assert.match(ui, /'isRegistered'[\s\S]*'userRole'[\s\S]*localStorage\.removeItem/);
 });
 
+test("로그인은 현재 브라우저 탭에서만 유지되고 새 탭에서는 초기화된다", async () => {
+  const ui = await readProjectFile("ui.js");
+  assert.match(ui, /const LOGIN_SESSION_KEY = 'eobom_demo_login_active'/);
+  assert.match(ui, /sessionStorage\.setItem\(LOGIN_SESSION_KEY, 'true'\)/);
+  assert.match(ui, /if \(!hasActiveBrowserLogin\)[\s\S]*clearLoginState\(\{ clearScreen: true \}\)/);
+  assert.match(ui, /\['pregnant\.html', 'senior\.html', 'mypage\.html'\][\s\S]*window\.location\.replace\('index\.html'\)/);
+});
+
 test("새 고민과 새 이야기는 이전 답변 및 녹음 데이터를 초기화한다", async () => {
   const ui = await readProjectFile("ui.js");
   const resetFields = [
