@@ -184,6 +184,44 @@ textarea:focus { border-color: lightcoral; }
 .stt-content { font-size: 18px; line-height: 1.6; color: #111111; margin: 0; word-break: keep-all; }
 .senior-action-btn { width: 100%; padding: 16px 20px; background-color: #2e7d32; color: #ffffff; font-size: 18px; }
 
+/* 어르신 화면은 가독성을 높이되 카드의 밀도와 줄바꿈 균형을 유지한다. */
+.senior-page { align-items: flex-start; padding: 76px 0 28px; }
+.senior-page .container { max-width: 470px; justify-content: flex-start; }
+.senior-page .header-close-btn,
+.senior-page .profile-top-btn { font-size: 15px !important; }
+.senior-page .senior-card { padding: 34px 26px; gap: 20px; }
+.senior-page .question-badge { font-size: 17px; padding: 7px 18px; }
+.senior-page .senior-question-title { font-size: 23px; line-height: 1.65; }
+.senior-page .senior-guide { font-size: 19px; line-height: 1.7; }
+.senior-page .senior-mic-btn #mic-btn-label { font-size: 20px; }
+.senior-page .status-text { font-size: 19px; }
+.senior-page .stt-title { font-size: 16px; }
+.senior-page .stt-content { min-height: 170px; font-size: 20px; line-height: 1.7; }
+.senior-page .notice-box { padding: 18px 20px; border-radius: 14px; font-size: 17px; line-height: 1.75; word-break: keep-all; }
+.senior-page .senior-action-btn { min-height: 64px; padding: 17px 22px; font-size: 20px; }
+.senior-page #retry-mentor-processing-btn { margin-top: 12px; }
+.senior-page #letterResultSection h2 { font-size: 24px; }
+.senior-page #letterResultSection h3 { margin: 6px 0 0; font-size: 20px; line-height: 1.5; }
+.senior-page #letterResultSection details { width: 100%; font-size: 17px; line-height: 1.7; text-align: left; }
+.senior-page #letterResultSection summary { padding: 8px 2px; font-weight: bold; cursor: pointer; }
+.senior-page #letterResultSection .tag { font-size: 15px; padding: 7px 13px; }
+.senior-page #letterResultSection .button,
+.senior-page #thank-you-section .button { min-height: 58px; padding: 16px 22px; font-size: 18px; }
+.senior-page #letterResultSection .button + .button,
+.senior-page #thank-you-section .button + .button { margin-top: 10px; }
+.senior-page .senior-thank-title { font-size: 26px; }
+.senior-page .senior-thank-box { font-size: 20px; line-height: 1.7; }
+
+@media (max-width: 420px) {
+    .senior-page { padding-top: 70px; }
+    .senior-page .container { padding: 14px; }
+    .senior-page .senior-card { padding: 28px 20px; }
+    .senior-page .senior-question-title { font-size: 21px; }
+    .senior-page .senior-guide { font-size: 18px; }
+    .senior-page .notice-box { font-size: 16px; padding: 16px; }
+    .senior-page .senior-action-btn { font-size: 19px; }
+}
+
 .profile-avatar-large { font-size: 48px; line-height: 1; display: inline-block; margin-bottom: 4px; }
 .baby-welcome-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px;}
 .baby-icon-large { font-size: 44px; background-color: #ffffff; padding: 10px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }

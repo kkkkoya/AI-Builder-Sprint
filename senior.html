@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
 </head>
-<body class="fade-in">
+<body class="fade-in senior-page">
 
     <header class="global-top-header">
         <!-- 👈 왼쪽: 뒤로가기 버튼 -->
@@ -53,17 +53,33 @@
                     </div>
                 </div>
 
+                <div id="mentor-answer-guidance" class="notice-box hidden" role="alert">
+                    도착한 고민과 관련된 실제 경험으로 확인하기 어려워요.<br>
+                    비슷한 일을 겪었던 상황과 당시의 마음을 조금 더 들려주세요.
+                </div>
+                <div id="mentor-temporary-notice" class="notice-box hidden" role="alert"></div>
+
                 <button id="send-experience-btn" class="button senior-action-btn hidden">🎁 이 경험 전달하기</button>
+                <button id="retry-mentor-processing-btn" class="button senior-action-btn hidden">다시 정리하기</button>
                 <button id="mentorAnswerSubmitButton" style="display:none;"></button>
             </div>
         </section>
 
-        <!-- 3단계(추가): B용 AI 편지 결과 & 이어짐 기록 (기본 숨김) -->
+        <!-- 3단계: AI 정리 결과 확인 후 최종 전달 -->
         <section id="letterResultSection" class="card-box senior-card hidden">
-            <p id="letterText" class="senior-guide"></p>
-            <ul id="editList"></ul>
+            <h2>경험 정리 완료</h2>
+            <h3 id="experienceResultTitle"></h3>
+            <p id="experienceResultSummary" class="senior-guide"></p>
             <div id="experienceTags"></div>
-            <div id="safetyBox"></div>
+            <h3>편지로 정리된 내용</h3>
+            <p id="letterText" class="senior-guide"></p>
+            <details>
+                <summary>AI가 정리한 부분 보기</summary>
+                <ul id="editList"></ul>
+                <div id="safetyBox"></div>
+            </details>
+            <button id="edit-mentor-result-btn" class="button secondary-btn">내용 수정하기</button>
+            <button id="finalize-mentor-result-btn" class="button senior-action-btn">최종 전달하기</button>
         </section>
 
         <!-- 4단계: 감사 메시지 결과 화면 -->
@@ -74,10 +90,10 @@
                 <div class="senior-thank-box"><p id="impact-empty-state">감사 메시지가 도착하면 이곳에서 확인할 수 있어요.</p></div>
             </div>
 
-            <button id="senior-reset-btn" class="button secondary-btn" style="font-size: 18px; padding: 16px 24px;">
+            <button id="senior-reset-btn" class="button secondary-btn">
                 🔄 다른 이야기 또 들려주기
             </button>
-            <button id="senior-home-complete-btn" class="button secondary-btn" style="font-size: 16px; padding: 14px 20px;">
+            <button id="senior-home-complete-btn" class="button secondary-btn">
                 ‹ 처음으로 돌아가기
             </button>
         </section>

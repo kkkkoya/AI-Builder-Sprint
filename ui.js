@@ -117,6 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMentorResult(result) {
         if (!result) return;
 
+        setText('experienceResultTitle', result.experienceCard?.title || '경험 이야기');
+        setText('experienceResultSummary', result.experienceCard?.summary || '');
         setText('receivedLetterText', result.letter || '');
         setText('letterText', result.letter || '');
         replaceTextItems('editList', result.edits || [], 'li');
@@ -149,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialSession = loadSession();
     renderAnalysis(initialSession.analysis);
     renderMatch(initialSession.match);
-    renderMentorResult(initialSession.mentorResult);
+    renderMentorResult(initialSession.mentorDraftResult || initialSession.mentorResult);
     renderFeedback(initialSession.feedback);
 
     /* ==========================================
@@ -301,9 +303,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const selectedTags = [
+                ...document.querySelectorAll('.chip-btn.active')
+            ]
+                .map(button => button.dataset.tag)
+                .filter(Boolean);
+
             localStorage.setItem('isRegistered', 'true');
             localStorage.setItem('seniorName', name);
             localStorage.setItem('seniorAge', age);
+            localStorage.setItem(
+                'seniorExperienceTags',
+                JSON.stringify(selectedTags)
+            );
             localStorage.setItem('userRole', 'senior');
 
             const heroTitle = document.getElementById('hero-title');
@@ -735,11 +747,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const thankYouSection = document.getElementById('thank-you-section');
     const seniorResetBtn = document.getElementById('senior-reset-btn');
     const seniorHomeCompleteBtn = document.getElementById('senior-home-complete-btn');
+    const answerGuidance = document.getElementById('mentor-answer-guidance');
+    const temporaryNotice = document.getElementById('mentor-temporary-notice');
+    const retryMentorProcessingBtn = document.getElementById('retry-mentor-processing-btn');
+    const editMentorResultBtn = document.getElementById('edit-mentor-result-btn');
+    const finalizeMentorResultBtn = document.getElementById('finalize-mentor-result-btn');
+    const letterResultSection = document.getElementById('letterResultSection');
 
     const sessionData = loadSession();
+    const initialTranscriptInput = document.getElementById('transcriptInput');
+    if (initialTranscriptInput && sessionData.transcript) {
+        initialTranscriptInput.value = sessionData.transcript;
+        sttResultBox?.classList.remove('hidden');
+        sendExperienceBtn?.classList.remove('hidden');
+    }
     const mentorQuestionText = document.getElementById('mentorQuestionText');
     const mentorEmptyState = document.getElementById('mentor-empty-state');
-    const mentorQuestion = sessionData.match?.mentorQuestion || '';
+    const mentorQuestion = sessionData.mentorQuestion || sessionData.match?.mentorQuestion || '';
     if (mentorQuestionText) {
         mentorQuestionText.textContent = mentorQuestion ? `"${mentorQuestion}"` : '';
         mentorQuestionText.classList.toggle('hidden', !mentorQuestion);
@@ -752,10 +776,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasMentorResult =
             (session.currentStep === 'MENTOR_RESULT' || session.currentStep === 'FEEDBACK_COMPLETE') &&
             Boolean(session.mentorResult);
+        const isReviewing = session.currentStep === 'MENTOR_REVIEW' && Boolean(session.mentorDraftResult);
+        const isRetrying = session.currentStep === 'MENTOR_RETRY';
 
-        questionSection.classList.toggle('hidden', hasMentorResult);
-        recordSection?.classList.toggle('hidden', hasMentorResult);
+        questionSection.classList.toggle('hidden', hasMentorResult || isReviewing);
+        recordSection?.classList.toggle('hidden', hasMentorResult || isReviewing);
+        letterResultSection?.classList.toggle('hidden', !isReviewing);
         thankYouSection?.classList.toggle('hidden', !hasMentorResult);
+        temporaryNotice?.classList.toggle('hidden', !isRetrying);
+        retryMentorProcessingBtn?.classList.toggle('hidden', !isRetrying);
+        if (isRetrying && temporaryNotice) {
+            temporaryNotice.textContent = session.mentorProcessingNotice ||
+                '말씀하신 내용은 잘 담아두었어요. 지금은 편지로 다듬는 데 잠시 어려움이 있어요. 잠시 후 다시 정리해 주세요.';
+        }
     }
 
     restoreSeniorStep(sessionData);
@@ -817,44 +850,109 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (sendExperienceBtn) {
-        sendExperienceBtn.addEventListener('click', async () => {
-            const transcriptInput = document.getElementById('transcriptInput');
-            const currentTranscript = transcriptInput ? transcriptInput.value.trim() : '';
+    async function submitMentorTranscript() {
+        const transcriptInput = document.getElementById('transcriptInput');
+        const currentTranscript = transcriptInput ? transcriptInput.value.trim() : '';
 
-            if (!currentTranscript) {
-                alert('경험 내용을 말씀해 주세요!');
+        if (!currentTranscript) {
+            alert('경험 내용을 말씀해 주세요!');
+            return;
+        }
+
+        answerGuidance?.classList.add('hidden');
+        temporaryNotice?.classList.add('hidden');
+        retryMentorProcessingBtn?.classList.add('hidden');
+        sendExperienceBtn?.setAttribute('disabled', '');
+        updateSession({ transcript: currentTranscript });
+        const session = loadSession();
+
+        try {
+            const mentorResult = await processMentorAnswer({
+                question: session.mentorQuestion || '어르신의 경험을 말씀해 주세요.',
+                transcript: currentTranscript,
+                selectedMatch: session.match ? session.match.selected : null
+            });
+
+            if (!mentorResult?.ok) {
+                throw new Error(mentorResult?.error?.message || '답변 처리 중 오류가 발생했습니다.');
+            }
+
+            const result = mentorResult.data;
+            if (result.processingStatus === 'TEMPORARY_SAVED') {
+                const notice = result.userMessage ||
+                    '말씀하신 내용은 잘 담아두었어요. 지금은 편지로 다듬는 데 잠시 어려움이 있어요. 잠시 후 다시 정리해 주세요.';
+                updateSession({
+                    mentorResult: null,
+                    mentorDraftResult: null,
+                    temporaryMentorTranscript: currentTranscript,
+                    mentorProcessingNotice: notice,
+                    currentStep: 'MENTOR_RETRY'
+                });
+                if (temporaryNotice) temporaryNotice.textContent = notice;
+                temporaryNotice?.classList.remove('hidden');
+                retryMentorProcessingBtn?.classList.remove('hidden');
                 return;
             }
 
-            // Use the current text from the UI as the source of truth
-            updateSession({ transcript: currentTranscript });
-            const session = loadSession(); // Reload session to have the latest transcript
-
-            try {
-                const mentorResult = await processMentorAnswer({
-                    question: session.mentorQuestion || '어르신의 경험을 말씀해 주세요.',
-                    transcript: currentTranscript, // Use the UI value for the API call
-                    selectedMatch: session.match ? session.match.selected : null
+            if (result.answerCheck?.status !== 'VALID') {
+                updateSession({
+                    mentorResult: null,
+                    mentorDraftResult: null,
+                    currentStep: 'MENTOR_EDITING'
                 });
-
-                if (mentorResult && mentorResult.ok) {
-                    updateSession({ mentorResult: mentorResult.data, currentStep: 'MENTOR_RESULT' });
-                    renderMentorResult(mentorResult.data);
-
-                    if (questionSection) questionSection.classList.add('hidden');
-                    if (recordSection) recordSection.classList.add('hidden');
-                    if (thankYouSection) thankYouSection.classList.remove('hidden');
-                } else {
-                  // Handle AI processing failure
-                  alert(mentorResult?.error?.message || '답변 처리 중 오류가 발생했습니다.');
-                }
-            } catch (err) {
-                console.error("어르신 답변 제출 오류:", err);
-                alert('답변 제출 중 심각한 오류가 발생했습니다.');
+                answerGuidance?.classList.remove('hidden');
+                sttResultBox?.classList.remove('hidden');
+                sendExperienceBtn?.classList.remove('hidden');
+                return;
             }
-        });
+
+            if (result.processingStatus !== 'COMPLETED' || !result.experienceCard || !result.letter) {
+                throw new Error('AI 정리 결과를 확인하지 못했습니다. 다시 시도해 주세요.');
+            }
+
+            updateSession({
+                mentorResult: null,
+                mentorDraftResult: result,
+                temporaryMentorTranscript: '',
+                mentorProcessingNotice: '',
+                currentStep: 'MENTOR_REVIEW'
+            });
+            renderMentorResult(result);
+            questionSection?.classList.add('hidden');
+            recordSection?.classList.add('hidden');
+            letterResultSection?.classList.remove('hidden');
+            thankYouSection?.classList.add('hidden');
+        } catch (err) {
+            console.error("어르신 답변 제출 오류:", err);
+            alert(err.message || '답변 처리 중 오류가 발생했습니다.');
+        } finally {
+            sendExperienceBtn?.removeAttribute('disabled');
+        }
     }
+
+    sendExperienceBtn?.addEventListener('click', submitMentorTranscript);
+    retryMentorProcessingBtn?.addEventListener('click', submitMentorTranscript);
+
+    editMentorResultBtn?.addEventListener('click', () => {
+        letterResultSection?.classList.add('hidden');
+        questionSection?.classList.remove('hidden');
+        recordSection?.classList.remove('hidden');
+        sttResultBox?.classList.remove('hidden');
+        sendExperienceBtn?.classList.remove('hidden');
+        updateSession({ mentorDraftResult: null, currentStep: 'MENTOR_EDITING' });
+    });
+
+    finalizeMentorResultBtn?.addEventListener('click', () => {
+        const session = loadSession();
+        if (!session.mentorDraftResult) return;
+        updateSession({
+            mentorResult: session.mentorDraftResult,
+            mentorDraftResult: null,
+            currentStep: 'MENTOR_RESULT'
+        });
+        letterResultSection?.classList.add('hidden');
+        thankYouSection?.classList.remove('hidden');
+    });
 
     if (seniorResetBtn) {
         seniorResetBtn.addEventListener('click', () => {
@@ -864,7 +962,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (thankYouSection) thankYouSection.classList.add('hidden');
             if (questionSection) questionSection.classList.remove('hidden');
             if (recordSection) recordSection.classList.remove('hidden');
-            updateSession({ currentStep: 'WAITING_FOR_MENTOR' });
+            letterResultSection?.classList.add('hidden');
+            answerGuidance?.classList.add('hidden');
+            temporaryNotice?.classList.add('hidden');
+            retryMentorProcessingBtn?.classList.add('hidden');
+            updateSession({
+                mentorResult: null,
+                mentorDraftResult: null,
+                temporaryMentorTranscript: '',
+                mentorProcessingNotice: '',
+                currentStep: 'WAITING_FOR_MENTOR'
+            });
         });
     }
 

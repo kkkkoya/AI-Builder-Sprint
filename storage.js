@@ -10,6 +10,9 @@ const DEFAULT_SESSION = {
   mentorQuestion: "",
   transcript: "",
   mentorResult: null,
+  mentorDraftResult: null,
+  temporaryMentorTranscript: "",
+  mentorProcessingNotice: "",
   feedback: null,
   audioUrl: "", // 녹음된 음성 파일 URL
   currentStep: "INPUT",

@@ -53,6 +53,19 @@ export const SAFETY_LEVELS = Object.freeze({
   DANGER: "danger",
 });
 
+export const ANSWER_CHECK_STATUSES = Object.freeze({
+  VALID: "VALID",
+  TOO_SHORT: "TOO_SHORT",
+  OFF_TOPIC: "OFF_TOPIC",
+  UNCLEAR: "UNCLEAR",
+});
+
+export const MENTOR_PROCESSING_STATUSES = Object.freeze({
+  COMPLETED: "COMPLETED",
+  REJECTED: "REJECTED",
+  TEMPORARY_SAVED: "TEMPORARY_SAVED",
+});
+
 /*
  * AI 매칭 점수의 최대값이다.
  *
@@ -733,6 +746,31 @@ function normalizeFidelity(
   };
 }
 
+export function normalizeAnswerCheck(
+  rawAnswerCheck = {},
+  fallbackStatus = ANSWER_CHECK_STATUSES.UNCLEAR
+) {
+  const allowedStatuses = Object.values(
+    ANSWER_CHECK_STATUSES
+  );
+
+  const status = allowedStatuses.includes(
+    rawAnswerCheck?.status
+  )
+    ? rawAnswerCheck.status
+    : fallbackStatus;
+
+  return {
+    status,
+    reason: cleanString(
+      rawAnswerCheck?.reason
+    ),
+    followUpQuestion: cleanString(
+      rawAnswerCheck?.followUpQuestion
+    ),
+  };
+}
+
 /*
  * Experience Archive Agent,
  * Human Voice Agent,
@@ -744,30 +782,72 @@ export function normalizeMentorExperienceResult(
   const rawExperienceCard =
     rawResult.experienceCard ??
     rawResult.experience ??
-    {};
+    null;
+
+  const hasCompletedContent = Boolean(
+    rawExperienceCard &&
+    typeof rawExperienceCard === "object" &&
+    cleanString(rawResult.letter)
+  );
+
+  const answerCheck = normalizeAnswerCheck(
+    rawResult.answerCheck,
+    hasCompletedContent
+      ? ANSWER_CHECK_STATUSES.VALID
+      : ANSWER_CHECK_STATUSES.UNCLEAR
+  );
+
+  const processingStatus = Object.values(
+    MENTOR_PROCESSING_STATUSES
+  ).includes(rawResult.processingStatus)
+    ? rawResult.processingStatus
+    : answerCheck.status === ANSWER_CHECK_STATUSES.VALID &&
+      hasCompletedContent
+      ? MENTOR_PROCESSING_STATUSES.COMPLETED
+      : MENTOR_PROCESSING_STATUSES.REJECTED;
+
+  const isCompleted =
+    processingStatus === MENTOR_PROCESSING_STATUSES.COMPLETED &&
+    answerCheck.status === ANSWER_CHECK_STATUSES.VALID &&
+    hasCompletedContent;
 
   return {
-    experienceCard:
-      normalizeExperienceCard(
-        rawExperienceCard
-      ),
+    answerCheck,
+    processingStatus,
 
-    letter: cleanString(
-      rawResult.letter,
-      "어르신의 경험을 정리하고 있습니다."
-    ),
+    experienceCard: isCompleted
+      ? normalizeExperienceCard(
+          rawExperienceCard
+        )
+      : null,
 
-    edits: cleanStringArray(
-      rawResult.edits,
-      10
-    ),
+    letter: isCompleted
+      ? cleanString(rawResult.letter)
+      : "",
 
-    fidelity: normalizeFidelity(
-      rawResult.fidelity
-    ),
+    edits: isCompleted
+      ? cleanStringArray(
+          rawResult.edits,
+          10
+        )
+      : [],
 
-    safety: normalizeSafety(
-      rawResult.safety
+    fidelity: isCompleted
+      ? normalizeFidelity(rawResult.fidelity)
+      : normalizeFidelity(),
+
+    safety: isCompleted
+      ? normalizeSafety(rawResult.safety)
+      : normalizeSafety(),
+
+    temporaryTranscript:
+      processingStatus ===
+        MENTOR_PROCESSING_STATUSES.TEMPORARY_SAVED
+        ? cleanString(rawResult.temporaryTranscript)
+        : "",
+
+    userMessage: cleanString(
+      rawResult.userMessage
     ),
   };
 }

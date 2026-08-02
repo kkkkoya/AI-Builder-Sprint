@@ -15,6 +15,8 @@
 import {
   SOURCE_TYPES,
   ROUTE_TYPES,
+  ANSWER_CHECK_STATUSES,
+  MENTOR_PROCESSING_STATUSES,
   normalizeConcernRoute,
   normalizeAiMatchResult,
   normalizeMentorExperienceResult,
@@ -739,64 +741,79 @@ function createMockConcernAnalysis(
  * 원문에 없는 사건이나 결과를 만들지 않는다.
  */
 
-function createMockMentorResult(
-  transcript,
-  selectedMatch
-) {
-  const experienceTitle =
-    cleanText(
-      selectedMatch
-        ?.experienceTitle,
+const MENTOR_ANSWER_GUIDANCE =
+  "도착한 고민과 관련된 실제 경험으로 확인하기 어려워요. 비슷한 일을 겪었던 상황과 당시의 마음을 조금 더 들려주세요.";
 
-      "어르신이 들려주신 경험"
-    );
+const TEMPORARY_SAVE_MESSAGE =
+  "말씀하신 내용은 잘 담아두었어요. 지금은 편지로 다듬는 데 잠시 어려움이 있어요. 잠시 후 다시 정리해 주세요.";
 
-  const summary =
-    transcript.length > 220
-      ? `${transcript.slice(
-          0,
-          220
-        )}…`
-      : transcript;
+export function evaluateMentorAnswer({ transcript = "" } = {}) {
+  const text = cleanText(transcript);
+  const compactText = text.replace(/\s/g, "");
+
+  if (compactText.length < 10) {
+    return {
+      status: ANSWER_CHECK_STATUSES.TOO_SHORT,
+      reason: "실제 경험을 확인하기에는 답변이 너무 짧습니다.",
+      followUpQuestion: MENTOR_ANSWER_GUIDANCE,
+    };
+  }
+
+  const offTopicPattern =
+    /(도착한\s*질문|질문을?\s*받|서비스\s*(사용|이용)|사용\s*방법|로그인|회원가입|버튼|화면에서|어떻게\s*(써|쓰|사용))/;
+  const experiencePattern =
+    /(저도|나는|내가|우리|그때|당시|아이를|출산|임신|육아|낳|키우|돌보|겪|다퉜|힘들|걱정|느꼈|했[어습]|였[어습])/;
+
+  if (offTopicPattern.test(text) && !experiencePattern.test(text)) {
+    return {
+      status: ANSWER_CHECK_STATUSES.OFF_TOPIC,
+      reason: "도착한 고민과 관련된 실제 경험이 아니라 서비스 이용에 관한 내용입니다.",
+      followUpQuestion: MENTOR_ANSWER_GUIDANCE,
+    };
+  }
+
+  if (experiencePattern.test(text)) {
+    return {
+      status: ANSWER_CHECK_STATUSES.VALID,
+      reason: "도착한 고민과 관련된 실제 상황이나 감정이 포함되어 있습니다.",
+      followUpQuestion: "",
+    };
+  }
 
   return {
-    experienceCard: {
-      title: experienceTitle,
+    status: ANSWER_CHECK_STATUSES.UNCLEAR,
+    reason: "답변만으로는 실제 경험인지 분명하게 확인하기 어렵습니다.",
+    followUpQuestion: MENTOR_ANSWER_GUIDANCE,
+  };
+}
 
-      summary,
+function createRejectedMentorResult(answerCheck) {
+  return {
+    answerCheck,
+    processingStatus: MENTOR_PROCESSING_STATUSES.REJECTED,
+    experienceCard: null,
+    letter: "",
+    edits: [],
+    fidelity: { preservedMeaning: false, addedFacts: [], warnings: [] },
+    safety: { riskLevel: "safe", flags: [], guidance: "" },
+  };
+}
 
-      timeline: [transcript],
-
-      emotions: [],
-
-      helpTypes: [
-        "실제 경험",
-      ],
-
-      standardTags: [],
+function createTemporaryMentorResult(transcript) {
+  return {
+    answerCheck: {
+      status: ANSWER_CHECK_STATUSES.VALID,
+      reason: "답변은 저장했지만 AI 정리를 완료하지 못했습니다.",
+      followUpQuestion: "",
     },
-
-    letter: transcript,
-
-    edits: [
-      "Mock 결과에서는 원문을 그대로 유지했습니다.",
-      "원문에 없는 사건이나 조언을 추가하지 않았습니다.",
-    ],
-
-    fidelity: {
-      preservedMeaning: true,
-      addedFacts: [],
-      warnings: [],
-    },
-
-    safety: {
-      riskLevel: "safe",
-
-      flags: [],
-
-      guidance:
-        "이 내용은 한 사람의 개인적인 경험이며 모든 사람에게 동일하게 적용되는 정답은 아닙니다.",
-    },
+    processingStatus: MENTOR_PROCESSING_STATUSES.TEMPORARY_SAVED,
+    experienceCard: null,
+    letter: "",
+    edits: [],
+    fidelity: { preservedMeaning: false, addedFacts: [], warnings: [] },
+    safety: { riskLevel: "safe", flags: [], guidance: "" },
+    temporaryTranscript: transcript,
+    userMessage: TEMPORARY_SAVE_MESSAGE,
   };
 }
 
@@ -1166,6 +1183,22 @@ export async function processMentorAnswer(
       ? payload.selectedMatch
       : null;
 
+  const preliminaryCheck =
+    evaluateMentorAnswer({ transcript });
+
+  if (
+    preliminaryCheck.status === ANSWER_CHECK_STATUSES.TOO_SHORT ||
+    preliminaryCheck.status === ANSWER_CHECK_STATUSES.OFF_TOPIC
+  ) {
+    return createSuccessResponse(
+      normalizeMentorExperienceResult(
+        createRejectedMentorResult(preliminaryCheck)
+      ),
+      SOURCE_TYPES.RULE,
+      false
+    );
+  }
+
   if (
     AI_MODE ===
     AI_MODES.SOLAR
@@ -1199,10 +1232,7 @@ export async function processMentorAnswer(
       );
 
       const fallbackResult =
-        createMockMentorResult(
-          transcript,
-          selectedMatch
-        );
+        createTemporaryMentorResult(transcript);
 
       return createSuccessResponse(
         normalizeMentorExperienceResult(
@@ -1222,10 +1252,7 @@ export async function processMentorAnswer(
   );
 
   const mockResult =
-    createMockMentorResult(
-      transcript,
-      selectedMatch
-    );
+    createTemporaryMentorResult(transcript);
 
   return createSuccessResponse(
     normalizeMentorExperienceResult(

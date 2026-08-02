@@ -31,6 +31,27 @@ const validAnalysis = {
   },
 };
 
+const validMentorResult = {
+  answerCheck: {
+    status: "VALID",
+    reason: "실제 경험이 포함되어 있습니다.",
+    followUpQuestion: "",
+  },
+  processingStatus: "COMPLETED",
+  experienceCard: {
+    title: "육아로 힘들었던 경험",
+    summary: "아이를 돌보며 잠이 부족해 힘들었던 경험이다.",
+    timeline: ["아이를 돌봄"],
+    emotions: ["힘듦"],
+    helpTypes: ["실제 경험"],
+    standardTags: ["수면 부족"],
+  },
+  letter: "저도 아이를 돌보며 잠이 부족해 힘들었어요.",
+  edits: [],
+  fidelity: { preservedMeaning: true, addedFacts: [], warnings: [] },
+  safety: { riskLevel: "safe", flags: [], guidance: "" },
+};
+
 function upstreamResponse(status, body) {
   return {
     ok: status >= 200 && status < 300,
@@ -120,6 +141,12 @@ test("구조가 복잡한 작업은 첫 요청부터 JSON 모드를 사용한다
   globalThis.fetch = async (_url, options) => {
     requestBodies.push(JSON.parse(options.body));
     return successfulCompletion({
+      answerCheck: {
+        status: "VALID",
+        reason: "실제 경험이 포함되어 있습니다.",
+        followUpQuestion: "",
+      },
+      processingStatus: "COMPLETED",
       experienceCard: {
         title: "일을 쉬었던 경험",
         summary: "아이를 낳고 일을 쉬었던 경험이다.",
@@ -158,6 +185,33 @@ test("구조가 복잡한 작업은 첫 요청부터 JSON 모드를 사용한다
       type: "json_object",
     });
     assert.equal(requestBodies[0].max_tokens, 1800);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.UPSTAGE_API_KEY = originalKey;
+  }
+});
+
+test("선택된 경험 연결 정보가 없어도 어르신 답변을 정리한다", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.UPSTAGE_API_KEY;
+  let userPayload;
+
+  process.env.UPSTAGE_API_KEY = "test-key";
+  globalThis.fetch = async (_url, options) => {
+    const requestBody = JSON.parse(options.body);
+    userPayload = JSON.parse(requestBody.messages.at(-1).content);
+    return successfulCompletion(validMentorResult);
+  };
+
+  try {
+    const result = await invoke("process-mentor-answer", {
+      question: "육아 경험을 들려주세요.",
+      transcript: "저도 아이를 돌보며 잠을 못 자서 많이 힘들었어요.",
+    });
+
+    assert.equal(result.statusCode, 200);
+    assert.equal(userPayload.selectedMatch, null);
+    assert.equal(result.body.data.processingStatus, "COMPLETED");
   } finally {
     globalThis.fetch = originalFetch;
     process.env.UPSTAGE_API_KEY = originalKey;
