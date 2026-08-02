@@ -37,7 +37,7 @@ test("프로필 오디오와 하위 페이지 프로필 버튼을 표시하는 �
   assert.match(ui, /if \(isRegistered && hasRequiredProfile\)[\s\S]*mainProfileBtn\.classList\.remove\('hidden'\)/);
 });
 
-test("질문 없는 어르신 제출을 차단하고 데모 범위를 안내한다", async () => {
+test("질문 없는 어르신 제출을 차단하고 도착 알림을 안내한다", async () => {
   const [ui, seniorHtml, demo] = await Promise.all([
     readProjectFile("ui.js"),
     readProjectFile("senior.html"),
@@ -45,7 +45,7 @@ test("질문 없는 어르신 제출을 차단하고 데모 범위를 안내한�
   ]);
   assert.match(ui, /if \(!currentQuestion\)/);
   assert.match(ui, /아직 도착한 고민이 없어요/);
-  assert.match(seniorHtml, /같은 브라우저에서 어르신 모드로 전환/);
+  assert.match(seniorHtml, /도착한 질문이 있으면 알려드릴게요/);
   assert.match(demo, /서로 다른 기기나 브라우저 사이의 실제 전달 기능은 아직 구현되지 않았습니다/);
 });
 
