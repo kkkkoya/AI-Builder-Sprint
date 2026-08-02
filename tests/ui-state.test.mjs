@@ -61,3 +61,15 @@ test("정리된 경험 키워드는 해시 태그 칩으로 표시한다", async
   assert.match(style, /\.experience-keyword-list[\s\S]*flex-wrap: wrap/);
   assert.match(style, /\.experience-keyword-chip[\s\S]*border-radius: 999px/);
 });
+
+test("마이페이지는 누적 고민과 답변 배열을 최신순으로 렌더링한다", async () => {
+  const [ui, mypage] = await Promise.all([
+    readProjectFile("ui.js"),
+    readProjectFile("mypage.html"),
+  ]);
+  assert.match(ui, /session\.concernHistory[\s\S]*\.reverse\(\)/);
+  assert.match(ui, /session\.mentorAnswerHistory\.filter/);
+  assert.match(ui, /answers\.forEach\(answer/);
+  assert.match(mypage, /id="pregnant-history-records"/);
+  assert.match(mypage, /id="senior-history-records"/);
+});

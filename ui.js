@@ -10,6 +10,10 @@ import {
 import {
   loadSession,
   updateSession,
+  startConcernRecord,
+  updateActiveConcernRecord,
+  appendMentorAnswerRecord,
+  updateLatestAnswerForConcern,
 } from "./storage.js";
 
 import {
@@ -497,7 +501,124 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    renderProfileHistory();
+    function renderProfileHistoryRecords() {
+        if (!profileUserName) return;
+
+        const session = loadSession();
+        const isPregnant = (localStorage.getItem('userRole') || 'pregnant') === 'pregnant';
+        const toggle = (element, visible) => element?.classList.toggle('hidden', !visible);
+        const createTextElement = (tagName, className, text) => {
+            const element = document.createElement(tagName);
+            if (className) element.className = className;
+            element.textContent = text || '';
+            return element;
+        };
+        const formatRecordDate = value => {
+            const date = new Date(value);
+            return Number.isNaN(date.getTime())
+                ? ''
+                : new Intl.DateTimeFormat('ko-KR', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                }).format(date);
+        };
+        const appendAnswerPlayback = (container, answer) => {
+            const letter = answer.mentorResult?.letter || '';
+            if (answer.audioUrl) {
+                const audioContainer = createTextElement('div', 'audio-container', '');
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = answer.audioUrl;
+                audioContainer.appendChild(audio);
+                container.appendChild(audioContainer);
+            } else if (letter && 'speechSynthesis' in window) {
+                const speakButton = createTextElement('button', 'button secondary-btn mentor-speech-button', '답변 음성으로 듣기');
+                speakButton.type = 'button';
+                speakButton.addEventListener('click', () => {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(letter);
+                    utterance.lang = 'ko-KR';
+                    window.speechSynthesis.speak(utterance);
+                });
+                container.appendChild(speakButton);
+            }
+        };
+
+        if (isPregnant) {
+            const empty = document.getElementById('pregnant-empty-state');
+            const recordsContainer = document.getElementById('pregnant-history-records');
+            const currentName = localStorage.getItem('userName') || '';
+            const concerns = session.concernHistory
+                .filter(record => !record.authorName || record.authorName === currentName)
+                .slice()
+                .reverse();
+            toggle(empty, concerns.length === 0);
+            recordsContainer?.replaceChildren();
+
+            concerns.forEach(concern => {
+                const item = createTextElement('article', 'history-item', '');
+                const header = createTextElement('div', 'item-header', '');
+                header.append(
+                    createTextElement('span', 'item-tag', '고민'),
+                    createTextElement('span', 'item-date', formatRecordDate(concern.createdAt))
+                );
+                item.append(header, createTextElement('p', 'item-content', `"${concern.concernText}"`));
+
+                const answers = session.mentorAnswerHistory.filter(answer => answer.concernId === concern.id);
+                if (answers.length === 0) {
+                    item.appendChild(createTextElement('p', 'empty-sub', '아직 전달된 어르신 경험이 없어요.'));
+                }
+                answers.forEach(answer => {
+                    const answerBox = createTextElement('div', 'matched-answer-box', '');
+                    const mentorName = answer.mentorName || answer.selectedMatch?.mentorName || '어르신';
+                    answerBox.appendChild(createTextElement('p', 'mentor-label', `${mentorName} 멘토님의 답변`));
+                    appendAnswerPlayback(answerBox, answer);
+                    answerBox.appendChild(createTextElement('p', 'answer-text', answer.mentorResult?.letter || answer.transcript || ''));
+                    item.appendChild(answerBox);
+                });
+                recordsContainer?.appendChild(item);
+            });
+        } else {
+            const empty = document.getElementById('senior-empty-state');
+            const recordsContainer = document.getElementById('senior-history-records');
+            const currentName = localStorage.getItem('seniorName') || '';
+            const answers = session.mentorAnswerHistory
+                .filter(answer => !answer.mentorName || answer.mentorName === currentName)
+                .slice()
+                .reverse();
+            toggle(empty, answers.length === 0);
+            recordsContainer?.replaceChildren();
+
+            answers.forEach(answer => {
+                const item = createTextElement('article', 'history-item', '');
+                const header = createTextElement('div', 'item-header', '');
+                header.append(
+                    createTextElement('span', 'item-tag', '전달한 경험'),
+                    createTextElement('span', 'item-date', formatRecordDate(answer.createdAt))
+                );
+                const summary = createTextElement('div', 'summary-box', '');
+                summary.append(
+                    createTextElement('strong', '', '답변한 고민: '),
+                    document.createTextNode(answer.question || '도착한 고민')
+                );
+                item.append(header, summary);
+                appendAnswerPlayback(item, answer);
+                const transcriptBox = createTextElement('div', 'stt-content-box', '');
+                transcriptBox.appendChild(createTextElement('p', 'stt-text', `"${answer.transcript || ''}"`));
+                item.appendChild(transcriptBox);
+                const reactionBox = createTextElement('div', 'received-reaction-box', '');
+                reactionBox.append(
+                    createTextElement('p', 'reaction-title', '감사 메시지'),
+                    createTextElement('p', 'reaction-text', answer.feedback?.message || '아직 감사 메시지가 도착하지 않았어요.')
+                );
+                item.appendChild(reactionBox);
+                recordsContainer?.appendChild(item);
+            });
+        }
+    }
+
+    renderProfileHistoryRecords();
     if (mypageBackBtn) {
         mypageBackBtn.addEventListener('click', () => window.location.href = 'index.html');
     }
@@ -613,6 +734,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                         updateSession({ match: matchResult.data, mentorQuestion: matchResult.data.mentorQuestion, currentStep: 'RECOMMENDED' });
+                        updateActiveConcernRecord({
+                            concernText: content,
+                            analysisSummary: analysis?.summary || '',
+                            mentorQuestion: matchResult.data.mentorQuestion || '',
+                            selectedMatch: matchResult.data.selected,
+                        });
                         renderMatch(matchResult.data);
                         const selected = matchResult.data.selected;
 
@@ -678,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             localStorage.setItem('userPregnancyInput', content);
+            startConcernRecord(content);
             if (pregnancyInput) pregnancyInput.disabled = true;
             submitBtn.disabled = true;
 
@@ -743,6 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mentorProcessingNotice: '',
                 feedback: null,
                 audioUrl: '',
+                activeConcernId: '',
                 currentStep: 'INPUT',
                 clarifyingQuestion: '',
             });
@@ -770,6 +899,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 updateSession({ feedback: feedbackResult.data, currentStep: 'FEEDBACK_COMPLETE' });
+                updateLatestAnswerForConcern(session.activeConcernId, {
+                    feedback: feedbackResult.data,
+                });
                 localStorage.setItem('userThankReactionText', thankText);
                 renderFeedback(feedbackResult.data);
                 if (thankCompleteMsg) thankCompleteMsg.classList.remove('hidden');
@@ -1019,6 +1151,11 @@ document.addEventListener('DOMContentLoaded', () => {
             mentorResult: session.mentorDraftResult,
             mentorDraftResult: null,
             currentStep: 'MENTOR_RESULT'
+        });
+        appendMentorAnswerRecord({
+            mentorResult: session.mentorDraftResult,
+            transcript: session.transcript,
+            audioUrl: session.audioUrl,
         });
         letterResultSection?.classList.add('hidden');
         thankYouSection?.classList.remove('hidden');
