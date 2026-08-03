@@ -6,6 +6,34 @@ import {
   evaluateMentorAnswer,
   processMentorAnswer,
 } from "../api.js";
+import { normalizeMentorExperienceResult } from "../agents.js";
+
+test("AI 수정 내역과 안전 안내를 자연스러운 한국어 문장으로 통일한다", () => {
+  const result = normalizeMentorExperienceResult({
+    answerCheck: { status: "VALID" },
+    processingStatus: "COMPLETED",
+    experienceCard: { title: "경험", summary: "요약" },
+    letter: "저도 많이 걱정했어요.",
+    edits: [
+      "문장 부호 정리 및 반복 표현 제거",
+      "불분명한 표현을 명확화",
+    ],
+    fidelity: { preservedMeaning: true, warnings: [] },
+    safety: {
+      riskLevel: "safe",
+      guidance: "emotional tone만 추출했으며, 해결 방법은 포함되지 않음",
+    },
+  });
+
+  assert.deepEqual(result.edits, [
+    "문장 부호를 정리하고 반복되는 표현을 덜어냈습니다.",
+    "불분명한 표현을 명확하게 다듬었습니다.",
+  ]);
+  assert.equal(
+    result.safety.guidance,
+    "감정의 흐름만 추출했으며, 해결 방법은 포함하지 않았습니다."
+  );
+});
 
 test("서비스 이용 질문은 OFF_TOPIC이며 편지를 생성하지 않는다", async () => {
   const transcript = "응 근데 도착한 질문을 받을 방법은";
@@ -62,6 +90,55 @@ test("실제 출산·육아 경험은 VALID 결과와 편지를 반환한다", a
     assert.equal(result.data.processingStatus, "COMPLETED");
     assert.ok(result.data.experienceCard);
     assert.ok(result.data.letter);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("첫 편지가 원문을 거의 복사하면 Solar에 한 번 더 재정리를 요청한다", async () => {
+  const originalFetch = globalThis.fetch;
+  const transcript = "저도 임신했을 때 지원 제도를 몰라서 걱정이 많았어요. 나중에 주민센터에서 정보를 확인했고 가족과 함께 필요한 지원을 신청했어요. 그 뒤에는 일을 계속할 방법을 차근차근 준비할 수 있었어요.";
+  const responses = [
+    transcript,
+    "저도 임신했을 때 지원 제도를 알지 못해 걱정이 많았습니다. 그러다 주민센터에서 필요한 정보를 확인하고 가족과 함께 지원을 신청했습니다. 덕분에 일을 이어갈 방법도 차근차근 준비할 수 있었습니다.",
+  ];
+  const sentPayloads = [];
+  globalThis.fetch = async (_url, options) => {
+    sentPayloads.push(JSON.parse(options.body).payload);
+    const letter = responses[Math.min(sentPayloads.length - 1, responses.length - 1)];
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ok: true,
+        data: {
+          answerCheck: { status: "VALID", reason: "실제 경험", followUpQuestion: "" },
+          processingStatus: "COMPLETED",
+          experienceCard: {
+            title: "지원 제도를 찾아 일을 이어간 경험",
+            summary: "임신 중 지원 정보를 찾아 신청하고 일을 이어갈 준비를 한 경험입니다.",
+            timeline: ["지원 정보를 확인함", "가족과 지원을 신청함"],
+            emotions: ["걱정"],
+            helpTypes: ["실제 경험"],
+            standardTags: ["경력 유지"],
+          },
+          letter,
+          edits: ["경험의 흐름에 따라 문단을 정리했습니다."],
+          fidelity: { preservedMeaning: true, addedFacts: [], warnings: [] },
+          safety: { riskLevel: "safe", flags: [], guidance: "개인의 경험입니다." },
+        },
+      }),
+    };
+  };
+
+  try {
+    const result = await processMentorAnswer({
+      question: "임신 중 일을 이어가기 위해 어떤 도움을 받으셨나요?",
+      transcript,
+    });
+    assert.equal(sentPayloads.length, 2);
+    assert.equal(sentPayloads[1].refinementRequired, true);
+    assert.equal(result.data.letter, responses[1]);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -148,6 +225,8 @@ test("어르신 화면은 재답변 안내와 임시 저장 재시도 동선을 
   assert.match(html, /AI가 정리한 부분 보기/);
   assert.match(html, /내용 수정하기/);
   assert.match(html, /최종 전달하기/);
+  assert.ok(html.indexOf('id="finalize-mentor-result-btn"') < html.indexOf('<details>'));
+  assert.match(ui, /formatAiExplanation/);
   assert.match(ui, /processingStatus === 'TEMPORARY_SAVED'/);
   assert.match(ui, /currentStep: 'MENTOR_REVIEW'/);
   assert.doesNotMatch(html + ui, /Mock 결과에서는|fallback 결과/i);

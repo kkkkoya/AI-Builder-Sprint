@@ -787,6 +787,46 @@ export function evaluateMentorAnswer({ transcript = "" } = {}) {
   };
 }
 
+function compactForSimilarity(value) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^0-9a-z가-힣]/g, "");
+}
+
+function calculateBigramSimilarity(leftValue, rightValue) {
+  const left = compactForSimilarity(leftValue);
+  const right = compactForSimilarity(rightValue);
+  if (left.length < 2 || right.length < 2) return left === right ? 1 : 0;
+
+  const counts = new Map();
+  for (let index = 0; index < left.length - 1; index += 1) {
+    const pair = left.slice(index, index + 2);
+    counts.set(pair, (counts.get(pair) || 0) + 1);
+  }
+
+  let overlap = 0;
+  for (let index = 0; index < right.length - 1; index += 1) {
+    const pair = right.slice(index, index + 2);
+    const remaining = counts.get(pair) || 0;
+    if (remaining > 0) {
+      overlap += 1;
+      counts.set(pair, remaining - 1);
+    }
+  }
+
+  return (2 * overlap) / (left.length + right.length - 2);
+}
+
+function needsStrongerMentorAnswerEditing(transcript, result) {
+  const source = compactForSimilarity(transcript);
+  const letter = compactForSimilarity(result?.letter);
+  if (source.length < 60 || !letter) return false;
+  const lengthRatio = letter.length / source.length;
+  return lengthRatio >= 0.82 &&
+    lengthRatio <= 1.18 &&
+    calculateBigramSimilarity(source, letter) >= 0.9;
+}
+
 function createRejectedMentorResult(answerCheck) {
   return {
     answerCheck,
@@ -957,7 +997,7 @@ export async function analyzeConcern(
  * ==================================================
  *
  * 전체 경험을 바로 Solar에 보내지 않는다.
- * matching.js가 후보 최대 3개를 검색하고,
+ * matching.js가 관련도 1위 후보 한 개를 검색하고,
  * transcript와 letter를 제외한 경량 데이터만 보낸다.
  */
 
@@ -1000,7 +1040,7 @@ export async function matchExperience(
   ) {
     try {
       /*
-       * 전체 경험에서 후보 최대 3개를 검색한다.
+       * 전체 경험에서 관련도 1위 후보 한 개를 검색한다.
        *
        * matching.js가 transcript와 letter를
        * Solar 전달 데이터에서 제외한다.
@@ -1015,7 +1055,7 @@ export async function matchExperience(
         experiences.length === 0
       ) {
         throw new Error(
-          "AI가 비교할 수 있는 경험 후보를 찾지 못했습니다."
+          "AI가 검토할 수 있는 경험 후보를 찾지 못했습니다."
         );
       }
 
@@ -1038,7 +1078,7 @@ export async function matchExperience(
       /*
        * 세 번째 인자로 experiences를 전달한다.
        *
-       * Solar가 이번 요청 후보 3개 밖의
+       * Solar가 이번 요청 후보 밖의
        * ID를 반환하면 검증에서 제거된다.
        */
       const validatedResult =
@@ -1204,7 +1244,7 @@ export async function processMentorAnswer(
     AI_MODES.SOLAR
   ) {
     try {
-      const solarResult =
+      let solarResult =
         await callSolarAction(
           API_ACTIONS
             .PROCESS_MENTOR_ANSWER,
@@ -1215,6 +1255,23 @@ export async function processMentorAnswer(
             selectedMatch,
           }
         );
+
+      if (needsStrongerMentorAnswerEditing(transcript, solarResult)) {
+        try {
+          solarResult = await callSolarAction(
+            API_ACTIONS.PROCESS_MENTOR_ANSWER,
+            {
+              question,
+              transcript,
+              selectedMatch,
+              refinementRequired: true,
+              previousLetter: cleanText(solarResult?.letter),
+            }
+          );
+        } catch (refinementError) {
+          console.warn("[AI] 편지 재정리 요청 실패, 첫 번째 결과를 유지합니다.", refinementError);
+        }
+      }
 
       return createSuccessResponse(
         normalizeMentorExperienceResult(

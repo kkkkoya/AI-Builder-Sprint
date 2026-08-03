@@ -43,11 +43,10 @@ const analysis = {
   urgency: "normal",
 };
 
-test("Solar 후보는 최대 3개이며 민감한 원문을 포함하지 않는다", () => {
+test("Solar 후보는 관련도 1위 한 개이며 민감한 원문을 포함하지 않는다", () => {
   const candidates = prepareExperienceArchiveForAi(analysis, archive);
 
-  assert.equal(candidates.length, 3);
-  assert.equal(new Set(candidates.map(({ experienceId }) => experienceId)).size, 3);
+  assert.equal(candidates.length, 1);
 
   for (const candidate of candidates) {
     assert.equal("transcript" in candidate, false);
@@ -56,14 +55,48 @@ test("Solar 후보는 최대 3개이며 민감한 원문을 포함하지 않는�
   }
 });
 
-test("3개 후보 안에 관련도 1위와 감정 맥락 후보를 함께 둔다", () => {
+test("규칙 검색 결과의 관련도 1위 경험만 Solar 후보로 사용한다", () => {
   const candidates = selectExperienceCandidates(analysis, archive);
 
+  assert.equal(candidates.length, 1);
   assert.equal(candidates[0].experienceId, "experience-006");
+  assert.ok(candidates[0].retrieval.retrievalScore > 0);
   assert.ok(
-    candidates.some((candidate) =>
-      candidate.retrieval.emotionMatches.includes("불안")
-    )
+    candidates[0].retrieval.exactTagMatches.length > 0 ||
+      candidates[0].retrieval.relatedTagMatches.length > 0 ||
+      candidates[0].retrieval.needMatches.length > 0 ||
+      candidates[0].retrieval.emotionMatches.length > 0
+  );
+});
+
+test("서버 매칭 계약도 후보 한 개와 적합성 검토 역할로 통일한다", async () => {
+  const source = await readFile(
+    new URL("../api/solar.js", import.meta.url),
+    "utf8"
+  );
+  const matchPrompt = source.slice(
+    source.indexOf('너는 "이어봄"의 Experience Match Judge'),
+    source.indexOf('function normalizeCompactScores')
+  );
+
+  assert.match(source, /const MAX_MATCH_CANDIDATES = 1;/);
+  assert.match(matchPrompt, /관련도 1위 경험 한 개/);
+  assert.doesNotMatch(matchPrompt, /답변 유효성 판정/);
+  assert.match(
+    source,
+    /"analyze-concern": \{\s*timeoutMs: 20000,\s*maxTokens: 1200,/
+  );
+  assert.match(
+    source,
+    /"match-experience": \{\s*timeoutMs: 25000,\s*maxTokens: 900,/
+  );
+  assert.match(
+    source,
+    /"process-mentor-answer": \{\s*timeoutMs: 30000,\s*maxTokens: 1800,/
+  );
+  assert.match(
+    source,
+    /"create-impact-feedback": \{\s*timeoutMs: 15000,\s*maxTokens: 500,/
   );
 });
 

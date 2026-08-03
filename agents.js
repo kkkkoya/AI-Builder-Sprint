@@ -110,6 +110,21 @@ function cleanStringArray(value, maxLength = 10) {
   return [...new Set(cleanedItems)].slice(0, maxLength);
 }
 
+function normalizeUserFacingExplanation(value) {
+  return cleanString(value)
+    .replace(/emotional\s*tone/gi, "감정의 흐름")
+    .replace(/문장 부호 정리 및 반복 표현 제거\.?$/g, "문장 부호를 정리하고 반복되는 표현을 덜어냈습니다.")
+    .replace(/명확화\.?$/g, "명확하게 다듬었습니다.")
+    .replace(/포함되지 않음\.?$/g, "포함하지 않았습니다.")
+    .replace(/추가되지 않음\.?$/g, "추가하지 않았습니다.");
+}
+
+function normalizeUserFacingExplanations(value, maxLength = 10) {
+  return cleanStringArray(value, maxLength)
+    .map(normalizeUserFacingExplanation)
+    .filter(Boolean);
+}
+
 /*
  * true 또는 false 값을 안전하게 정리한다.
  */
@@ -298,11 +313,11 @@ function normalizeSafety(rawSafety = {}) {
 
   return {
     riskLevel,
-    flags: cleanStringArray(
+    flags: normalizeUserFacingExplanations(
       rawSafety.flags,
       10
     ),
-    guidance: cleanString(
+    guidance: normalizeUserFacingExplanation(
       rawSafety.guidance
     ),
   };
@@ -739,7 +754,7 @@ function normalizeFidelity(
       10
     ),
 
-    warnings: cleanStringArray(
+    warnings: normalizeUserFacingExplanations(
       rawFidelity.warnings,
       10
     ),
@@ -826,7 +841,7 @@ export function normalizeMentorExperienceResult(
       : "",
 
     edits: isCompleted
-      ? cleanStringArray(
+      ? normalizeUserFacingExplanations(
           rawResult.edits,
           10
         )

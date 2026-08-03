@@ -112,4 +112,3 @@ test('마이페이지 읽음 처리와 감사 알림은 질문 소유자 및 배
   db.markMentorFeedbackRead(question.questionId, 'mentor-001');
   assert.equal(db.getUnreadNotificationCount({ role: 'senior', mentorId: 'mentor-001' }), 0);
 });
-

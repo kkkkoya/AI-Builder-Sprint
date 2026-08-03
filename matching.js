@@ -1,8 +1,8 @@
 /*
  * 이어봄 경험 아카이브 연결 도구
  *
- * 최종 경험 선택은 Solar AI가 담당한다.
- * 이 파일은 전체 경험에서 관련 후보를 빠르게 찾고,
+ * 관련도 1위 경험 선택은 JavaScript 검색 엔진이 담당한다.
+ * 이 파일은 전체 경험에서 후보 한 개를 빠르게 찾고,
  * Solar 결과를 실제 데이터와 대조하며,
  * Solar 실패 시에만 규칙 기반 fallback을 제공한다.
  */
@@ -40,7 +40,7 @@ export const RETRIEVAL_MATCHING_LIMITS =
     EMOTION_COUNT: 2,
     KEYWORD_COUNT: 4,
     PRIMARY_COUNT: 1,
-    MAX_CANDIDATES: 3,
+    MAX_CANDIDATES: 1,
   });
 
 /*
@@ -249,8 +249,8 @@ function extractConcernTexts(
 /*
  * 문장 배열을 간단한 검색 단어로 나눈다.
  *
- * Solar의 최종 판단을 대신하는 기능이 아니라
- * 후보 검색 누락을 줄이기 위한 보조 기능이다.
+ * 태그만으로 후보를 정하지 않도록 경험 요약과
+ * 고민 문장의 맥락을 검색 점수에 보완하는 기능이다.
  */
 function tokenizeTexts(values) {
   const stopWords = new Set([
@@ -761,7 +761,7 @@ function calculateRetrievalCandidate(
       keywordMatches,
 
       /*
-       * 후보 다양성 검사에 사용한다.
+       * 복합 고민과의 관련도 계산에 사용한다.
        */
       matchedTopics: [
         ...exactTagMatches,
@@ -812,43 +812,10 @@ function compareRetrievalCandidates(
 }
 
 /*
- * 같은 경험이 중복되지 않도록
- * 후보 배열에 추가한다.
- */
-function pushUniqueCandidate(
-  target,
-  candidate,
-  maximumLength
-) {
-  if (!candidate) {
-    return;
-  }
-
-  if (target.length >= maximumLength) {
-    return;
-  }
-
-  const alreadyExists = target.some(
-    (item) =>
-      item.experience.experienceId ===
-      candidate.experience.experienceId
-  );
-
-  if (!alreadyExists) {
-    target.push(candidate);
-  }
-}
-
-/*
- * 전체 경험 중 Solar가 비교할 후보를
- * 최대 3개 선택한다.
- *
- * 구성:
- *
- * 1. 기본 관련도 1위 후보
- * 2. 감정적으로 가까운 추가 후보
- * 3. 아직 포함되지 않은 고민 영역 후보
- * 4. 남는 자리는 관련도 순으로 채움
+ * 전체 경험을 규칙 기반으로 빠르게 평가해
+ * 관련도 1위 후보 한 개만 선택한다.
+ * Solar는 이 후보의 의미 적합성을 검토하고
+ * 어르신에게 전달할 질문을 생성한다.
  */
 export function selectExperienceCandidates(
   analysis,
@@ -896,116 +863,18 @@ export function selectExperienceCandidates(
     return [];
   }
 
-  const selectedCandidates = [];
+  return rankedCandidates
+    .slice(0, limit)
+    .map((candidate) => ({
+        ...candidate.experience,
 
-  /*
-   * 1. 관련도 1위 후보를 먼저 포함한다.
-   */
-  const primaryCount = Math.min(
-    RETRIEVAL_MATCHING_LIMITS
-      .PRIMARY_COUNT,
-    limit
-  );
-
-  rankedCandidates
-    .slice(0, primaryCount)
-    .forEach((candidate) =>
-      pushUniqueCandidate(
-        selectedCandidates,
-        candidate,
-        limit
-      )
+        /*
+         * 이 값은 내부 검사와 테스트용이다.
+         * Solar 전달 데이터에는 포함하지 않는다.
+         */
+        retrieval: candidate.retrieval,
+      })
     );
-
-  /*
-   * 2. 감정 일치 후보를 보완한다.
-   */
-  const emotionalCandidate =
-    rankedCandidates.find(
-      (candidate) =>
-        candidate.retrieval
-          .emotionMatches.length > 0 &&
-        !selectedCandidates.some(
-          (selected) =>
-            selected.experience
-              .experienceId ===
-            candidate.experience
-              .experienceId
-        )
-    );
-
-  pushUniqueCandidate(
-    selectedCandidates,
-    emotionalCandidate,
-    limit
-  );
-
-  /*
-   * 3. 기존 후보가 다루지 않는
-   * 다른 고민 영역의 후보를 찾는다.
-   */
-  const coveredTopics = new Set(
-    selectedCandidates.flatMap(
-      (candidate) =>
-        candidate.retrieval
-          .matchedTopics
-    )
-  );
-
-  const complementaryCandidate =
-    rankedCandidates.find(
-      (candidate) =>
-        !selectedCandidates.some(
-          (selected) =>
-            selected.experience
-              .experienceId ===
-            candidate.experience
-              .experienceId
-        ) &&
-        candidate.retrieval
-          .matchedTopics.some(
-            (topic) =>
-              !coveredTopics.has(topic)
-          )
-    );
-
-  pushUniqueCandidate(
-    selectedCandidates,
-    complementaryCandidate,
-    limit
-  );
-
-  /*
-   * 4. 최대 개수보다 적으면
-   * 관련도 순서대로 나머지를 채운다.
-   */
-  for (
-    const candidate of rankedCandidates
-  ) {
-    pushUniqueCandidate(
-      selectedCandidates,
-      candidate,
-      limit
-    );
-
-    if (
-      selectedCandidates.length >= limit
-    ) {
-      break;
-    }
-  }
-
-  return selectedCandidates.map(
-    (candidate) => ({
-      ...candidate.experience,
-
-      /*
-       * 이 값은 내부 검사와 테스트용이다.
-       * Solar 전달 데이터에는 포함하지 않는다.
-       */
-      retrieval: candidate.retrieval,
-    })
-  );
 }
 
 /*
@@ -1015,7 +884,7 @@ export function selectExperienceCandidates(
  */
 
 /*
- * Solar에는 후보 최대 3개의
+ * Solar에는 관련도 1위 후보 한 개의
  * 요약 정보만 전달한다.
  *
  * transcript와 letter는 보내지 않는다.

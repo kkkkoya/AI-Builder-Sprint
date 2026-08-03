@@ -228,7 +228,7 @@ textarea:focus { border-color: lightcoral; }
     font-weight: 700;
 }
 .mentor-question-choice-summary {
-    font-size: 19px;
+    font-size: 21px;
     line-height: 1.55;
     word-break: keep-all;
 }
@@ -268,26 +268,26 @@ textarea:focus { border-color: lightcoral; }
 .senior-page { align-items: flex-start; padding: 76px 0 28px; }
 .senior-page .container { max-width: 470px; justify-content: flex-start; }
 .senior-page .header-close-btn,
-.senior-page .profile-top-btn { font-size: 15px !important; }
+.senior-page .profile-top-btn { font-size: 17px !important; }
 .senior-page .senior-card { padding: 34px 26px; gap: 20px; }
-.senior-page .question-badge { font-size: 17px; padding: 7px 18px; }
-.senior-page .empty-sub { font-size: 16px; line-height: 1.7; word-break: keep-all; }
-.senior-page .senior-question-title { font-size: 23px; line-height: 1.65; }
-.senior-page .senior-guide { font-size: 19px; line-height: 1.7; }
-.senior-page .senior-mic-btn #mic-btn-label { font-size: 20px; }
-.senior-page .status-text { font-size: 19px; }
-.senior-page .stt-title { font-size: 16px; }
-.senior-page .stt-content { min-height: 170px; font-size: 20px; line-height: 1.7; }
-.senior-page .notice-box { padding: 18px 20px; border-radius: 14px; font-size: 17px; line-height: 1.75; word-break: keep-all; }
-.senior-page .senior-action-btn { min-height: 64px; padding: 17px 22px; font-size: 20px; }
+.senior-page .question-badge { font-size: 19px; padding: 8px 20px; }
+.senior-page .empty-sub { font-size: 18px; line-height: 1.75; word-break: keep-all; }
+.senior-page .senior-question-title { font-size: 25px; line-height: 1.65; }
+.senior-page .senior-guide { font-size: 21px; line-height: 1.75; }
+.senior-page .senior-mic-btn #mic-btn-label { font-size: 22px; }
+.senior-page .status-text { font-size: 20px; }
+.senior-page .stt-title { font-size: 18px; }
+.senior-page .stt-content { min-height: 170px; font-size: 22px; line-height: 1.7; }
+.senior-page .notice-box { padding: 18px 20px; border-radius: 14px; font-size: 19px; line-height: 1.75; word-break: keep-all; }
+.senior-page .senior-action-btn { min-height: 64px; padding: 17px 22px; font-size: 21px; }
 .senior-page #retry-mentor-processing-btn { margin-top: 12px; }
-.senior-page #letterResultSection h2 { font-size: 24px; }
-.senior-page #letterResultSection h3 { margin: 6px 0 0; font-size: 20px; line-height: 1.5; }
-.senior-page #letterResultSection details { width: 100%; font-size: 17px; line-height: 1.7; text-align: left; }
-.senior-page #letterResultSection summary { padding: 8px 2px; font-weight: bold; cursor: pointer; }
-.senior-page #letterResultSection .tag { font-size: 15px; padding: 7px 13px; }
+.senior-page #letterResultSection h2 { font-size: 27px; }
+.senior-page #letterResultSection h3 { margin: 6px 0 0; font-size: 23px; line-height: 1.55; }
+.senior-page #letterResultSection details { width: 100%; margin-top: 8px; font-size: 19px; line-height: 1.75; text-align: left; }
+.senior-page #letterResultSection summary { padding: 10px 2px; font-weight: bold; cursor: pointer; }
+.senior-page #letterResultSection .tag { font-size: 17px; padding: 8px 14px; }
 .senior-page .experience-keyword-section { width: 100%; margin: 2px 0 8px; }
-.senior-page .experience-keyword-label { margin: 0 0 11px; color: #7a5a00; font-size: 16px; font-weight: bold; }
+.senior-page .experience-keyword-label { margin: 0 0 11px; color: #7a5a00; font-size: 18px; font-weight: bold; }
 .senior-page .experience-keyword-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
 .senior-page .experience-keyword-chip {
     display: inline-flex;
@@ -303,9 +303,10 @@ textarea:focus { border-color: lightcoral; }
     word-break: keep-all;
 }
 .senior-page #letterResultSection .button,
-.senior-page #thank-you-section .button { min-height: 58px; padding: 16px 22px; font-size: 18px; }
+.senior-page #thank-you-section .button { min-height: 60px; padding: 16px 22px; font-size: 20px; }
 .senior-page #letterResultSection .button + .button,
 .senior-page #thank-you-section .button + .button { margin-top: 10px; }
+.senior-page .mentor-result-actions { width: 100%; margin-top: 6px; }
 .senior-page .senior-thank-title { font-size: 26px; }
 .senior-page .senior-thank-box { font-size: 20px; line-height: 1.7; }
 
@@ -313,10 +314,10 @@ textarea:focus { border-color: lightcoral; }
     .senior-page { padding-top: 70px; }
     .senior-page .container { padding: 14px; }
     .senior-page .senior-card { padding: 28px 20px; }
-    .senior-page .senior-question-title { font-size: 21px; }
-    .senior-page .senior-guide { font-size: 18px; }
-    .senior-page .notice-box { font-size: 16px; padding: 16px; }
-    .senior-page .senior-action-btn { font-size: 19px; }
+    .senior-page .senior-question-title { font-size: 23px; }
+    .senior-page .senior-guide { font-size: 20px; }
+    .senior-page .notice-box { font-size: 18px; padding: 16px; }
+    .senior-page .senior-action-btn { font-size: 20px; }
 }
 
 .profile-avatar-large { font-size: 48px; line-height: 1; display: inline-block; margin-bottom: 4px; }

@@ -100,6 +100,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
     }
 
+    function formatAiExplanation(value) {
+        return String(value || '')
+            .trim()
+            .replace(/emotional\s*tone/gi, '감정의 흐름')
+            .replace(/문장 부호 정리 및 반복 표현 제거\.?$/g, '문장 부호를 정리하고 반복되는 표현을 덜어냈습니다.')
+            .replace(/명확화\.?$/g, '명확하게 다듬었습니다.')
+            .replace(/포함되지 않음\.?$/g, '포함하지 않았습니다.')
+            .replace(/추가되지 않음\.?$/g, '추가하지 않았습니다.');
+    }
+
     function renderAnalysis() {
         // Analysis is stored for matching only and is not rendered to the user.
     }
@@ -196,7 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setText('experienceResultSummary', result.experienceCard?.summary || '');
         setText('receivedLetterText', result.letter || '');
         setText('letterText', result.letter || '');
-        replaceTextItems('editList', result.edits || [], 'li');
+        replaceTextItems('editList', (result.edits || []).map(formatAiExplanation), 'li');
         const experienceTags = document.getElementById('experienceTags');
         if (experienceTags) {
             experienceTags.replaceChildren();
@@ -212,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             result.safety?.guidance,
             ...(result.safety?.flags || []),
             ...(result.fidelity?.warnings || []),
-        ].filter(Boolean).join(' ');
+        ].filter(Boolean).map(formatAiExplanation).join(' ');
 
         setText('safetyBox', safetyText);
 
