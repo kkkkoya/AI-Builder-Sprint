@@ -128,6 +128,110 @@ function includesAny(text, keywords) {
   );
 }
 
+function shouldAskInitialClarification(
+  text,
+  history
+) {
+  if (history.length > 0) {
+    return false;
+  }
+
+  const compactText = cleanText(text)
+    .replace(/[\s.,!?~…]/g, "");
+
+  if (compactText.length < 5) {
+    return true;
+  }
+
+  const vagueOnlyExpressions = [
+    "힘들어요",
+    "너무힘들어요",
+    "그냥힘들어요",
+    "걱정돼요",
+    "너무걱정돼요",
+    "불안해요",
+    "답답해요",
+    "막막해요",
+    "모르겠어요",
+    "어떡하죠",
+  ];
+
+  if (vagueOnlyExpressions.includes(compactText)) {
+    return true;
+  }
+
+  return /^(임신|출산|육아|아이|아기|남편|배우자|가족|일|직장|회사|경력)(이|가|은|는|때문에|문제로|관련해서)?(너무)?(힘들어요?|걱정돼요?|불안해요?|답답해요?|막막해요?|두려워요?)$/.test(
+    compactText
+  );
+}
+
+function createClarificationQuestion(text) {
+  const concernText = cleanText(text);
+
+  if (includesAny(concernText, [
+    "출산",
+    "분만",
+    "진통",
+    "제왕절개",
+  ])) {
+    return "출산을 생각할 때 가장 걱정되는 순간이나 상황이 무엇인지 조금 더 들려주시겠어요?";
+  }
+
+  if (includesAny(concernText, [
+    "육아",
+    "아이",
+    "아기",
+    "양육",
+  ])) {
+    return "아이를 돌보는 일 중 요즘 가장 막막하거나 힘든 상황이 무엇인지 들려주시겠어요?";
+  }
+
+  if (includesAny(concernText, [
+    "남편",
+    "배우자",
+    "가족",
+    "시댁",
+    "친정",
+  ])) {
+    return "가족과 지내면서 어떤 상황이 가장 힘들었는지, 최근 있었던 일을 하나 들려주시겠어요?";
+  }
+
+  if (includesAny(concernText, [
+    "일",
+    "직장",
+    "회사",
+    "경력",
+    "복직",
+  ])) {
+    return "일과 임신·육아 사이에서 지금 가장 걱정되는 상황이 무엇인지 조금 더 들려주시겠어요?";
+  }
+
+  return "요즘 어떤 일 때문에 가장 힘든지, 실제로 겪고 있는 상황을 한 가지만 들려주시겠어요?";
+}
+
+function createClarificationResult(text) {
+  return {
+    route: ROUTE_TYPES.CLARIFICATION,
+    needsClarification: true,
+    clarifyingQuestion:
+      createClarificationQuestion(text),
+    response: "",
+    analysis: {
+      summary:
+        "현재 고민을 정확히 이해하기 위해 추가 설명이 필요합니다.",
+      concerns: [],
+      emotions: [],
+      situation:
+        "사용자의 구체적인 상황을 확인하고 있습니다.",
+      needs: [
+        "고민 상황에 대한 추가 설명",
+      ],
+      standardTags: [],
+      urgency: "normal",
+    },
+  };
+}
+
 function getClarificationHistory(payload) {
   if (
     !payload ||
@@ -362,61 +466,8 @@ function createMockConcernAnalysis(
     };
   }
 
-  const compactLength =
-    combinedText.replace(
-      /\s/g,
-      ""
-    ).length;
-
-  const vagueExpressions = [
-    "힘들어요",
-    "너무 힘들어요",
-    "그냥 힘들어",
-    "모르겠어요",
-    "답답해요",
-  ];
-
-  const isVague =
-    vagueExpressions.some(
-      (expression) =>
-        combinedText.trim() ===
-        expression
-    );
-
-  if (
-    historyAnswers.length === 0 &&
-    (compactLength < 10 || isVague)
-  ) {
-    return {
-      route:
-        ROUTE_TYPES.CLARIFICATION,
-
-      needsClarification: true,
-
-      clarifyingQuestion:
-        "가장 크게 힘든 부분은 출산에 대한 걱정, 육아와 가족 관계, 일과 경력, 또는 내 마음과 정체성 중 어느 쪽에 가까운가요?",
-
-      response: "",
-
-      analysis: {
-        summary:
-          "현재 고민을 정확히 이해하기 위해 추가 설명이 필요합니다.",
-
-        concerns: [],
-        emotions: [],
-
-        situation:
-          "사용자의 구체적인 상황을 확인하고 있습니다.",
-
-        needs: [
-          "고민 상황에 대한 추가 설명",
-        ],
-
-        standardTags: [],
-
-        urgency: "normal",
-      },
-    };
+  if (shouldAskInitialClarification(text, history)) {
+    return createClarificationResult(text);
   }
 
   const concerns = [];
@@ -867,11 +918,6 @@ function createMockImpactResult(
   reaction,
   payload
 ) {
-  const concernSummary =
-    cleanText(
-      payload?.concernSummary
-    );
-
   const experienceTitle =
     cleanText(
       payload?.selectedMatch
@@ -882,15 +928,39 @@ function createMockImpactResult(
 
   return {
     message:
-      `이용자가 ${experienceTitle}을 읽고 “${reaction}”라고 마음을 전했습니다.`,
+      `이용자가 “${reaction}”라고 마음을 전했습니다. 선생님의 경험을 읽고 직접 남긴 감사의 반응입니다.`,
 
     impactSummary:
-      concernSummary ||
-      "비슷한 고민을 가진 이용자가 선생님의 경험에 반응을 남겼습니다.",
+      `이용자가 “${reaction}”라는 반응을 남겼습니다.`,
 
     highlightedExperience:
       experienceTitle,
   };
+}
+
+function isGroundedImpactFeedback(
+  reaction,
+  result
+) {
+  const message = cleanText(
+    result?.message
+  );
+  const impactSummary = cleanText(
+    result?.impactSummary
+  );
+
+  if (
+    !message ||
+    !message.includes(reaction) ||
+    (impactSummary &&
+      !impactSummary.includes(reaction))
+  ) {
+    return false;
+  }
+
+  return !/(해소|해결되|극복|회복|완전히|다행|두려움이\s*사라|불안이\s*사라|이제\s*괜찮|문제가\s*풀)/.test(
+    `${message} ${impactSummary}`
+  );
 }
 
 /*
@@ -936,10 +1006,27 @@ export async function analyzeConcern(
           }
         );
 
-      return createSuccessResponse(
+      const normalizedResult =
         normalizeConcernRoute(
           solarResult
-        ),
+        );
+
+      const finalResult =
+        normalizedResult.route ===
+          ROUTE_TYPES.IN_SCOPE &&
+        shouldAskInitialClarification(
+          text,
+          history
+        )
+          ? normalizeConcernRoute(
+              createClarificationResult(
+                text
+              )
+            )
+          : normalizedResult;
+
+      return createSuccessResponse(
+        finalResult,
 
         SOURCE_TYPES.SOLAR,
 
@@ -1244,7 +1331,7 @@ export async function processMentorAnswer(
     AI_MODES.SOLAR
   ) {
     try {
-      let solarResult =
+      const solarResult =
         await callSolarAction(
           API_ACTIONS
             .PROCESS_MENTOR_ANSWER,
@@ -1257,20 +1344,13 @@ export async function processMentorAnswer(
         );
 
       if (needsStrongerMentorAnswerEditing(transcript, solarResult)) {
-        try {
-          solarResult = await callSolarAction(
-            API_ACTIONS.PROCESS_MENTOR_ANSWER,
-            {
-              question,
-              transcript,
-              selectedMatch,
-              refinementRequired: true,
-              previousLetter: cleanText(solarResult?.letter),
-            }
-          );
-        } catch (refinementError) {
-          console.warn("[AI] 편지 재정리 요청 실패, 첫 번째 결과를 유지합니다.", refinementError);
-        }
+        return createSuccessResponse(
+          normalizeMentorExperienceResult(
+            createTemporaryMentorResult(transcript)
+          ),
+          SOURCE_TYPES.SOLAR,
+          false
+        );
       }
 
       return createSuccessResponse(
@@ -1357,26 +1437,33 @@ export async function createImpactFeedback(
 
           {
             reaction,
-
-            concernSummary:
-              payload
-                ?.concernSummary ??
-              "",
-
-            selectedMatch:
-              payload
-                ?.selectedMatch ??
-              null,
           }
         );
 
-      return createSuccessResponse(
+      const normalizedResult =
         normalizeImpactFeedback(
           solarResult
-        ),
+        );
 
+      if (!isGroundedImpactFeedback(
+        reaction,
+        normalizedResult
+      )) {
+        return createSuccessResponse(
+          normalizeImpactFeedback(
+            createMockImpactResult(
+              reaction,
+              payload
+            )
+          ),
+          SOURCE_TYPES.FALLBACK,
+          true
+        );
+      }
+
+      return createSuccessResponse(
+        normalizedResult,
         SOURCE_TYPES.SOLAR,
-
         false
       );
     } catch (error) {

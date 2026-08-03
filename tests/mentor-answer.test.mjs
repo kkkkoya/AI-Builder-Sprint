@@ -95,17 +95,12 @@ test("실제 출산·육아 경험은 VALID 결과와 편지를 반환한다", a
   }
 });
 
-test("첫 편지가 원문을 거의 복사하면 Solar에 한 번 더 재정리를 요청한다", async () => {
+test("원문 복사 수준의 편지는 추가 호출 없이 정리 완료로 처리하지 않는다", async () => {
   const originalFetch = globalThis.fetch;
   const transcript = "저도 임신했을 때 지원 제도를 몰라서 걱정이 많았어요. 나중에 주민센터에서 정보를 확인했고 가족과 함께 필요한 지원을 신청했어요. 그 뒤에는 일을 계속할 방법을 차근차근 준비할 수 있었어요.";
-  const responses = [
-    transcript,
-    "저도 임신했을 때 지원 제도를 알지 못해 걱정이 많았습니다. 그러다 주민센터에서 필요한 정보를 확인하고 가족과 함께 지원을 신청했습니다. 덕분에 일을 이어갈 방법도 차근차근 준비할 수 있었습니다.",
-  ];
   const sentPayloads = [];
   globalThis.fetch = async (_url, options) => {
     sentPayloads.push(JSON.parse(options.body).payload);
-    const letter = responses[Math.min(sentPayloads.length - 1, responses.length - 1)];
     return {
       ok: true,
       status: 200,
@@ -122,7 +117,7 @@ test("첫 편지가 원문을 거의 복사하면 Solar에 한 번 더 재정리
             helpTypes: ["실제 경험"],
             standardTags: ["경력 유지"],
           },
-          letter,
+          letter: transcript,
           edits: ["경험의 흐름에 따라 문단을 정리했습니다."],
           fidelity: { preservedMeaning: true, addedFacts: [], warnings: [] },
           safety: { riskLevel: "safe", flags: [], guidance: "개인의 경험입니다." },
@@ -136,9 +131,11 @@ test("첫 편지가 원문을 거의 복사하면 Solar에 한 번 더 재정리
       question: "임신 중 일을 이어가기 위해 어떤 도움을 받으셨나요?",
       transcript,
     });
-    assert.equal(sentPayloads.length, 2);
-    assert.equal(sentPayloads[1].refinementRequired, true);
-    assert.equal(result.data.letter, responses[1]);
+    assert.equal(sentPayloads.length, 1);
+    assert.equal(result.data.processingStatus, "TEMPORARY_SAVED");
+    assert.equal(result.data.letter, "");
+    assert.equal(result.data.temporaryTranscript, transcript);
+    assert.match(result.data.userMessage, /다시 정리/);
   } finally {
     globalThis.fetch = originalFetch;
   }

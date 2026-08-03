@@ -154,8 +154,6 @@ textarea {
 }
 textarea:focus { border-color: lightcoral; }
 
-.button-group { display: flex; flex-direction: column; gap: 10px; width: 100%; align-items: center; margin-top: 6px; }
-
 .button {
     width: 100%; padding: 14px 20px; border-radius: 25px; border: none;
     font-family: inherit; font-size: 15px; font-weight: bold; cursor: pointer;
@@ -245,7 +243,6 @@ textarea:focus { border-color: lightcoral; }
     justify-content: center; align-items: center; gap: 8px; cursor: pointer;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); transition: all 0.2s ease; margin: 10px 0;
 }
-.senior-mic-btn .mic-icon { font-size: 48px; }
 .senior-mic-btn #mic-btn-label { font-size: 18px; font-weight: bold; }
 
 .senior-mic-btn.recording { background-color: #d32f2f; animation: pulse-ring 1.3s infinite; }
@@ -260,7 +257,6 @@ textarea:focus { border-color: lightcoral; }
 @keyframes blink { 50% { opacity: 0.3; } }
 
 .senior-stt-box { width: 100%; background-color: #ffffff; border: 1px solid #cccccc; border-radius: 14px; padding: 16px; text-align: left; box-sizing: border-box; margin-bottom: 24px; }
-.stt-title { font-size: 14px; font-weight: bold; color: #666666; margin: 0 0 6px 0; }
 .stt-content { font-size: 18px; line-height: 1.6; color: #111111; margin: 0; word-break: keep-all; }
 .senior-action-btn { width: 100%; padding: 16px 20px; background-color: #2e7d32; color: #ffffff; font-size: 18px; }
 
@@ -320,11 +316,7 @@ textarea:focus { border-color: lightcoral; }
     .senior-page .senior-action-btn { font-size: 20px; }
 }
 
-.profile-avatar-large { font-size: 48px; line-height: 1; display: inline-block; margin-bottom: 4px; }
 .baby-welcome-header { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px;}
-.baby-icon-large { font-size: 44px; background-color: #ffffff; padding: 10px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-.baby-illustration-box { position: relative; background-color: #ffffff; width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); border: 4px solid #ffffff; margin-top: 10px; }
-.baby-emoji { font-size: 50px; }
 
 .input-form { width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: left; margin-top: 10px; }
 .input-form label { font-size: 13px; font-weight: bold; color: #444444; }
@@ -337,13 +329,10 @@ textarea:focus { border-color: lightcoral; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .loading-text { line-height: 1.6; font-size: 15px; margin: 0; }
 .audio-container { background-color: #ffffff; padding: 10px 12px; border-radius: 12px; box-sizing: border-box; }
-.audio-label { font-size: 12px; margin: 0 0 6px 0; color: #555555; }
 audio { width: 100%; height: 36px; }
 .letter-box { text-align: left; background-color: #ffffff; padding: 16px; border-radius: 12px; line-height: 1.7; font-size: 14px; box-sizing: border-box; border-left: 5px solid lightcoral; }
 .letter-box p { margin: 0 0 8px 0; }
 .notice-box { text-align: left; font-size: 12px; line-height: 1.6; color: #666666; background-color: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; }
-.notice-edit { margin: 0 0 6px 0; }
-.notice-warning { margin: 0; color: #777777; }
 .divider { width: 100%; border: none; border-top: 1px dashed #cccccc; margin: 12px 0; }
 .thank-btn-group { display: flex; flex-direction: column; gap: 10px; }
 .thank-btn { background-color: #ffffff; border: 1px solid #dddddd; }
@@ -500,18 +489,8 @@ audio { width: 100%; height: 36px; }
     background-color: #ff859d;
 }
 
-/* 첫 화면: 모드 선택 */
-.mode-page { min-height: 100svh; margin: 0; display: grid; place-items: center; overflow: hidden; color: #171b29; background: radial-gradient(circle at 18% 15%, rgba(255,255,255,.85), transparent 32%), linear-gradient(135deg, #f8edea 0%, #f8f1ee 48%, #f4e8e5 100%); font-family: 'Noto Sans KR', 'Gowun Dodum', sans-serif; }
-.mode-shell { width: min(94vw, 523px); padding: 20px 0; }
-.mode-card { min-height: 418px; box-sizing: border-box; padding: 43px 31px 38px; border: 1px solid rgba(255,255,255,.88); border-radius: 38px; background: rgba(255,255,255,.94); box-shadow: 0 12px 30px rgba(82,62,57,.10); text-align: center; }
-.mode-intro h1 { margin: 0; color: #171b29; font-size: clamp(25px,5.2vw,30px); font-weight: 700; line-height: 1.42; letter-spacing: -.055em; }
-.mode-intro p { margin: 20px 0 31px; color: #8990a1; font-size: clamp(15px,3.5vw,17px); letter-spacing: -.035em; }
-.mode-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
-.mode-option { min-height: 179px; padding: 22px 10px 20px; border: 0; border-radius: 29px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; color: #1d2332; background: #fafbfc; box-shadow: 0 7px 18px rgba(42,52,72,.035); font: inherit; font-size: 18px; font-weight: 700; letter-spacing: -.055em; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease; }
-.mode-option:hover, .mode-option:focus-visible { background: #f7f8fb; box-shadow: 0 10px 22px rgba(42,52,72,.09); outline: none; transform: translateY(-3px); }
-.mode-option:focus-visible { outline: 3px solid #f0c8c1; outline-offset: 3px; }
 .mode-emoji { font-size: 48px; line-height: 1; margin-top: 15px; }
-@media (max-width: 390px) { .mode-shell { width: min(94vw,360px); } .mode-card { padding: 39px 21px 30px; border-radius: 31px; } .mode-options { gap: 11px; } .mode-option { min-height: 163px; border-radius: 24px; font-size: 16px; } .mode-emoji { font-size: 43px; } }
+@media (max-width: 390px) { .mode-emoji { font-size: 43px; } }
 
 /* ==========================================
    모드 선택 화면 (정사각형 그리드 레이아웃)
@@ -547,7 +526,6 @@ audio { width: 100%; height: 36px; }
 }
 
 .mode-emoji {
-    font-size: 48px; /* 이미지처럼 큼직한 이모지 사이즈 */
     display: block;
 }
 

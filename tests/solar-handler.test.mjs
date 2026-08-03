@@ -185,6 +185,12 @@ test("구조가 복잡한 작업은 첫 요청부터 JSON 모드를 사용한다
       type: "json_object",
     });
     assert.equal(requestBodies[0].max_tokens, 1800);
+    const systemPrompt = requestBodies[0].messages.find(
+      (message) => message.role === "system"
+    )?.content || "";
+    assert.match(systemPrompt, /원문 복사에 가까우면 같은 응답 안에서 다시 구성/);
+    assert.match(systemPrompt, /단순히 마침표, 띄어쓰기, 어미만 바꾼 결과는 허용하지 않는다/);
+    assert.doesNotMatch(systemPrompt, /이전 편지/);
   } finally {
     globalThis.fetch = originalFetch;
     process.env.UPSTAGE_API_KEY = originalKey;
@@ -282,6 +288,50 @@ test("형식이 불완전한 Solar 응답은 성공으로 위장하지 않는다
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalConsoleError;
+    process.env.UPSTAGE_API_KEY = originalKey;
+  }
+});
+
+test("감사 메시지 요청은 임산부 반응만 전달하고 확인되지 않은 회복 표현을 금지한다", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.UPSTAGE_API_KEY;
+  const requestBodies = [];
+
+  process.env.UPSTAGE_API_KEY = "test-key";
+  globalThis.fetch = async (_url, options) => {
+    requestBodies.push(JSON.parse(options.body));
+    return successfulCompletion({
+      message: "이용자가 “용기가 생겼어요”라고 마음을 전했습니다.",
+      impactSummary: "이용자가 “용기가 생겼어요”라는 반응을 남겼습니다.",
+      highlightedExperience: "",
+    });
+  };
+
+  try {
+    const result = await invoke("create-impact-feedback", {
+      reaction: "용기가 생겼어요",
+      concernSummary: "첫 출산이 두렵다.",
+      selectedMatch: {
+        experienceTitle: "첫 출산 경험",
+      },
+    });
+
+    assert.equal(result.statusCode, 200);
+    const userPayload = JSON.parse(
+      requestBodies[0].messages.find(
+        (message) => message.role === "user"
+      ).content
+    );
+    assert.deepEqual(userPayload, {
+      reaction: "용기가 생겼어요",
+    });
+    const systemPrompt = requestBodies[0].messages.find(
+      (message) => message.role === "system"
+    ).content;
+    assert.match(systemPrompt, /두려움이 해소되었습니다/);
+    assert.match(systemPrompt, /어르신에게 "다행입니다"라고 평가하거나 답변하지 않는다/);
+  } finally {
+    globalThis.fetch = originalFetch;
     process.env.UPSTAGE_API_KEY = originalKey;
   }
 });

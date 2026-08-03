@@ -379,15 +379,20 @@ export function normalizeConcernRoute(
   const allowedRoutes =
     Object.values(ROUTE_TYPES);
 
-  const route = allowedRoutes.includes(
+  const normalizedRoute = allowedRoutes.includes(
     rawResult.route
   )
     ? rawResult.route
     : ROUTE_TYPES.IN_SCOPE;
 
   const needsClarification =
-    route === ROUTE_TYPES.CLARIFICATION ||
+    normalizedRoute === ROUTE_TYPES.CLARIFICATION ||
     rawResult.needsClarification === true;
+
+  const route = needsClarification &&
+    normalizedRoute === ROUTE_TYPES.IN_SCOPE
+      ? ROUTE_TYPES.CLARIFICATION
+      : normalizedRoute;
 
   /*
    * 새로운 응답은 rawResult.analysis 안에

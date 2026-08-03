@@ -18,6 +18,22 @@ test("로그아웃은 계정 정보만 지우고 질문 세션은 보존한다",
   assert.match(ui, /'isRegistered'[\s\S]*'userRole'[\s\S]*localStorage\.removeItem/);
 });
 
+test("추가 질문 신호와 답변 이력을 안전하게 이어서 처리한다", async () => {
+  const ui = await readProjectFile("ui.js");
+  assert.match(ui, /route === 'CLARIFICATION' \|\| needsClarification === true/);
+  assert.match(ui, /clarifyingQuestion: nextClarifyingQuestion/);
+  assert.match(ui, /Array\.isArray\(session\.clarificationHistory\)/);
+  assert.match(ui, /await handleConcernAnalysis\(session\.concernText, newHistory\)/);
+});
+
+test("기존 감사 기록도 임산부 반응을 우선 표시하고 과장 문장을 숨긴다", async () => {
+  const ui = await readProjectFile("ui.js");
+  assert.match(ui, /function getFeedbackDisplayMessage\(feedback, reaction = ''\)/);
+  assert.match(ui, /getFeedbackDisplayMessage\(question\.feedback, question\.feedbackReaction\)/);
+  assert.match(ui, /해소\|해결되\|극복\|회복/);
+  assert.match(ui, /이용자가 선생님의 경험을 읽고 감사의 마음을 전했습니다/);
+});
+
 test("로그인은 현재 브라우저 탭에서만 유지되고 새 탭에서는 초기화된다", async () => {
   const ui = await readProjectFile("ui.js");
   assert.match(ui, /const LOGIN_SESSION_KEY = 'eobom_demo_login_active'/);

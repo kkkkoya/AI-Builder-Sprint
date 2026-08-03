@@ -1,5 +1,3 @@
-// ui.js - A팀원 프론트엔드 구조 100% 보존 & C팀원 AI API 완벽 연동
-
 import {
   analyzeConcern,
   matchExperience,
@@ -83,6 +81,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const text = typeof value === 'string' ? value.trim() : '';
         element.textContent = text || fallback;
+    }
+
+    function getFeedbackDisplayMessage(feedback, reaction = '') {
+        const directReaction = typeof reaction === 'string' ? reaction.trim() : '';
+        if (directReaction) {
+            return `이용자가 “${directReaction}”라고 마음을 전했습니다. 선생님의 경험을 읽고 직접 남긴 감사의 반응입니다.`;
+        }
+
+        const savedMessage = typeof feedback?.message === 'string'
+            ? feedback.message.trim()
+            : typeof feedback?.impactSummary === 'string'
+                ? feedback.impactSummary.trim()
+                : '';
+
+        if (/(해소|해결되|극복|회복|완전히|다행|두려움이\s*사라|불안이\s*사라)/.test(savedMessage)) {
+            return '이용자가 선생님의 경험을 읽고 감사의 마음을 전했습니다.';
+        }
+
+        return savedMessage;
     }
 
     function replaceTextItems(id, values, itemTag = 'p') {
@@ -238,8 +255,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function renderFeedback(feedback) {
         if (!feedback) return;
 
-        setText('impactMessage', feedback.message || feedback.impactSummary || '');
-        setText('senior-received-reaction', feedback.message || feedback.impactSummary || '');
+        const displayMessage = getFeedbackDisplayMessage(
+            feedback,
+            localStorage.getItem('userThankReactionText') || ''
+        );
+        setText('impactMessage', displayMessage);
+        setText('senior-received-reaction', displayMessage);
     }
 
     const initialSession = loadSession();
@@ -535,7 +556,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     answeredSummary.textContent = card.summary || "요약 정보가 없습니다.";
                 }
                 if (answeredTags) {
-                    answeredTags.innerHTML = ''; // Clear existing
+                    answeredTags.innerHTML = '';
                     if (card.standardTags && card.standardTags.length > 0) {
                         card.standardTags.forEach(tag => {
                             const tagEl = document.createElement('div');
@@ -627,7 +648,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 audio.src = session.audioUrl;
                 audio.closest('.audio-container')?.classList.remove('hidden');
             }
-            setText('senior-received-reaction', session.feedback?.message || '감사 메시지가 도착하면 이곳에서 확인할 수 있어요.');
+            setText(
+                'senior-received-reaction',
+                getFeedbackDisplayMessage(
+                    session.feedback,
+                    localStorage.getItem('userThankReactionText') || ''
+                ),
+                '감사 메시지가 도착하면 이곳에서 확인할 수 있어요.'
+            );
         }
     }
 
@@ -740,7 +768,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const reactionBox = createTextElement('div', 'received-reaction-box', '');
                 reactionBox.append(
                     createTextElement('p', 'reaction-title', '감사 메시지'),
-                    createTextElement('p', 'reaction-text', answer.feedback?.message || '아직 감사 메시지가 도착하지 않았어요.')
+                    createTextElement(
+                        'p',
+                        'reaction-text',
+                        getFeedbackDisplayMessage(answer.feedback) || '아직 감사 메시지가 도착하지 않았어요.'
+                    )
                 );
                 item.appendChild(reactionBox);
                 recordsContainer?.appendChild(item);
@@ -796,7 +828,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     answer.appendChild(tags);
                     appendSafety(answer, question.mentorResult);
                     if (question.feedback) {
-                        answer.appendChild(createElement('p', 'empty-sub', question.feedback.message || question.feedback.impactSummary || '감사 메시지를 전달했어요.'));
+                        answer.appendChild(createElement(
+                            'p',
+                            'empty-sub',
+                            getFeedbackDisplayMessage(question.feedback, question.feedbackReaction) || '감사 메시지를 전달했어요.'
+                        ));
                     } else {
                         const reactions = ['혼자가 아닌 것 같아요', '마음이 조금 놓였어요', '용기가 생겼어요'];
                         const reactionBox = createElement('div', 'thank-btn-group', '');
@@ -845,7 +881,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const feedback = createElement('div', 'received-reaction-box', '');
                     feedback.append(
                         createElement('p', 'reaction-title', '감사 메시지'),
-                        createElement('p', 'reaction-text', question.feedback.message || question.feedback.impactSummary || '')
+                        createElement(
+                            'p',
+                            'reaction-text',
+                            getFeedbackDisplayMessage(question.feedback, question.feedbackReaction)
+                        )
                     );
                     item.appendChild(feedback);
                     markMentorFeedbackRead(question.questionId, mentorId);
@@ -937,12 +977,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const concernResult = await analyzeConcern({ text: content, history: history });
 
             if (concernResult && concernResult.ok) {
-                const { route, analysis, clarifyingQuestion, response } = concernResult.data;
+                const { route, needsClarification, analysis, clarifyingQuestion, response } = concernResult.data;
 
-                if (route === 'CLARIFICATION') {
-                    updateSession({ currentStep: 'CLARIFICATION', clarifyingQuestion: clarifyingQuestion || '' });
+                if (route === 'CLARIFICATION' || needsClarification === true) {
+                    const nextClarifyingQuestion = clarifyingQuestion || '요즘 어떤 일 때문에 가장 힘든지, 실제로 겪고 있는 상황을 한 가지만 들려주시겠어요?';
+                    updateSession({ currentStep: 'CLARIFICATION', clarifyingQuestion: nextClarifyingQuestion });
                     if (loadingSection) loadingSection.classList.add('hidden');
-                    if (clarificationQuestionElem) clarificationQuestionElem.innerText = clarifyingQuestion || '구체적인 고민 내용을 조금 더 들려주시겠어요?';
+                    if (clarificationQuestionElem) clarificationQuestionElem.innerText = nextClarifyingQuestion;
                     if (clarificationInput) clarificationInput.value = '';
                     if (clarificationSection) clarificationSection.classList.remove('hidden');
                     return;
@@ -1056,14 +1097,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const session = loadSession();
-            const question = clarificationQuestionElem ? clarificationQuestionElem.innerText : '';
+            const question = session.clarifyingQuestion || (clarificationQuestionElem ? clarificationQuestionElem.innerText : '');
+            const previousHistory = Array.isArray(session.clarificationHistory)
+                ? session.clarificationHistory
+                : [];
             
             const newHistory = [
-                ...session.clarificationHistory,
+                ...previousHistory,
                 { question, answer }
             ];
 
-            await handleConcernAnalysis(session.concernText, newHistory);
+            clarificationSubmitBtn.disabled = true;
+            try {
+                await handleConcernAnalysis(session.concernText, newHistory);
+            } finally {
+                clarificationSubmitBtn.disabled = false;
+            }
         });
     }
 
@@ -1373,7 +1422,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function submitMentorTranscript() {
         const transcriptInput = document.getElementById('transcriptInput');
         const currentTranscript = transcriptInput ? transcriptInput.value.trim() : '';
-        const currentSession = loadSession();
         const currentQuestion = activeDemoQuestion?.mentorQuestion || '';
 
         if (!currentQuestion) {

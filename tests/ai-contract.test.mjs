@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { analyzeConcern } from "../api.js";
+import { normalizeConcernRoute } from "../agents.js";
+
 import {
   createFallbackMatchResult,
   prepareExperienceArchiveForAi,
@@ -42,6 +45,147 @@ const analysis = {
   standardTags: ["경력 단절", "재취업", "부부 갈등"],
   urgency: "normal",
 };
+
+test("추가 질문 신호는 CLARIFICATION 경로로 일관되게 정규화한다", () => {
+  const result = normalizeConcernRoute({
+    route: "IN_SCOPE",
+    needsClarification: true,
+    clarifyingQuestion: "어떤 상황이 가장 힘든가요?",
+    analysis: {},
+  });
+
+  assert.equal(result.route, "CLARIFICATION");
+  assert.equal(result.needsClarification, true);
+});
+
+test("구체적인 상황이 없는 짧은 고민에는 주제에 맞는 추가 질문을 보장한다", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      data: {
+        route: "IN_SCOPE",
+        needsClarification: false,
+        clarifyingQuestion: "",
+        response: "",
+        analysis: {
+          summary: "출산이 걱정된다.",
+          concerns: [],
+          emotions: [],
+          situation: "",
+          needs: [],
+          standardTags: [],
+          urgency: "normal",
+        },
+      },
+    }),
+  });
+
+  try {
+    const result = await analyzeConcern({
+      text: "출산이 걱정돼요",
+      history: [],
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.data.route, "CLARIFICATION");
+    assert.match(result.data.clarifyingQuestion, /출산/);
+    assert.match(result.data.clarifyingQuestion, /상황/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("짧더라도 구체적인 상황이 확인되면 글자 수만으로 추가 질문을 강제하지 않는다", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      data: {
+        route: "IN_SCOPE",
+        needsClarification: false,
+        clarifyingQuestion: "",
+        response: "",
+        analysis: {
+          summary: "입덧이 심해 일상생활이 힘들다.",
+          concerns: [{
+            type: "임신 중 신체 변화",
+            description: "입덧이 심하다.",
+            priority: 1,
+          }],
+          emotions: [],
+          situation: "임신 중 입덧을 겪고 있다.",
+          needs: ["입덧을 겪은 경험"],
+          standardTags: ["입덧"],
+          urgency: "normal",
+        },
+      },
+    }),
+  });
+
+  try {
+    const result = await analyzeConcern({
+      text: "입덧이 심해요",
+      history: [],
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.data.route, "IN_SCOPE");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("추가 답변으로 실제 상황이 확인되면 기존 고민과 함께 분석을 계속한다", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      data: {
+        route: "IN_SCOPE",
+        needsClarification: false,
+        clarifyingQuestion: "",
+        response: "",
+        analysis: {
+          summary: "출산 과정에서 혼자 진통을 견딜까 걱정한다.",
+          concerns: [{
+            type: "출산 불안",
+            description: "배우자가 늦게 올 때 혼자 진통을 견딜까 걱정한다.",
+            priority: 1,
+          }],
+          emotions: [{
+            name: "불안",
+            intensity: 70,
+            evidence: "혼자 진통을 견딜까 걱정돼요.",
+          }],
+          situation: "배우자의 귀가가 늦을 수 있는 출산 전 상황이다.",
+          needs: ["출산 불안을 지나온 경험"],
+          standardTags: ["출산 불안"],
+          urgency: "normal",
+        },
+      },
+    }),
+  });
+
+  try {
+    const result = await analyzeConcern({
+      text: "출산이 걱정돼요",
+      history: [{
+        question: "어떤 상황이 가장 걱정되나요?",
+        answer: "남편이 늦게 오면 혼자 진통을 견뎌야 할까 봐 걱정돼요.",
+      }],
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.data.route, "IN_SCOPE");
+    assert.equal(result.data.needsClarification, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("Solar 후보는 관련도 1위 한 개이며 민감한 원문을 포함하지 않는다", () => {
   const candidates = prepareExperienceArchiveForAi(analysis, archive);
